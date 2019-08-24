@@ -4,25 +4,24 @@ parameters:
   service_connection_github: '' 
   solution_to_build: ''
 
-  # We have dependencies on the following Environment Variables:
-  # GITVERSION_PRERELEASETAG
-  # BUILD_REPOSITORY_NAME
-
-  # We have dependencies on the following Build Variables:
-  # Endjin_Service_Connection_NuGet_Org
-  # Endjin_Service_Connection_GitHub
-  # Endjin.ForcePublish
-
 jobs:
-
-- job: Setup_Build_Agent
-
+- job: Build
   pool:
     vmImage: ${{ parameters.vmImage }}
-  
-  variables:
-    DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
 
+  variables:
+    BuildConfiguration: 'Release'
+    DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+    SolutionToBuild: ${{ parameters.solution_to_build }}
+
+    # We have dependencies on the following Environment Variables:
+    # GITVERSION_PRERELEASETAG
+    # BUILD_REPOSITORY_NAME
+
+    # We have dependencies on the following Build Variables:
+    # Endjin_Service_Connection_NuGet_Org
+    # Endjin_Service_Connection_GitHub
+    # Endjin.ForcePublish
   steps:
   - task: DotNetCoreInstaller@0
     displayName: 'Install .NET Core SDK 2.2.401 (Global Tools error workaround)'
@@ -48,16 +47,6 @@ jobs:
   #- powershell: 'gci Env:'
   #  displayName: 'Print Environment Variables'
 
-- job: Build
-
-  pool:
-    vmImage: ${{ parameters.vmImage }}
-
-  variables:
-    BuildConfiguration: 'Release'
-    SolutionToBuild: ${{ parameters.solution_to_build }}
-
-  steps:
   - task: DotNetCoreCLI@2
     displayName: 'Restore & Build'
     inputs:
@@ -100,13 +89,6 @@ jobs:
     displayName: 'Publish Artifact: Drop'
     inputs:
       PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-
-- job: Release
-
-  pool:
-    vmImage: ${{ parameters.vmImage }}
-
-  steps:
 
   - task: NuGetToolInstaller@0
     inputs:
