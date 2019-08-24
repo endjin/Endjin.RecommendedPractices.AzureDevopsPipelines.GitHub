@@ -1,17 +1,17 @@
+trigger:
+  branches:
+    include:
+    - master
+    - feature/*
+  tags:
+    include:
+    - '*'
+
 parameters:
   vmImage: 'ubuntu-latest'
 
 jobs:
 - job: Build
-  trigger:
-    branches:
-      include:
-      - master
-      - feature/*
-    tags:
-      include:
-      - '*'
-
   pool:
     vmImage: ${{ parameters.vmImage }}
 
