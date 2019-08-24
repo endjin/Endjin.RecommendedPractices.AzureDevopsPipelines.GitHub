@@ -1,8 +1,7 @@
+variables:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+
 steps:
-
-  variables:
-    DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
-
 - task: DotNetCoreInstaller@0
   displayName: 'Install .NET Core SDK 2.2.401 (Global Tools error workaround)'
   inputs:
