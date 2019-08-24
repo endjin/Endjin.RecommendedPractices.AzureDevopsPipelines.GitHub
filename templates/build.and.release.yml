@@ -1,3 +1,6 @@
+parameters:
+  vmImage: 'ubuntu-latest'
+
 trigger:
   branches:
     include:
@@ -8,7 +11,7 @@ trigger:
     - '*'
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: ${{ parameters.vmImage }}
 
 variables:
 
@@ -23,6 +26,7 @@ variables:
   # We have dependencies on the following Build Variables:
   # Endjin_Service_Connection_NuGet_Org
   # Endjin_Service_Connection_GitHub
+  # Endjin.ForcePublish
 
 steps:
 
