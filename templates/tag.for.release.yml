@@ -23,7 +23,7 @@ jobs:
   - task: GitHubTag@1
     displayName: 'Tag Git'
     inputs:
-      githubEndpoint: $(service_connection_github)
+      githubEndpoint: ${{ parameters.service_connection_github }}
       repositoryName: $(Endjin_Repository_Name)
       commmit: 'Release v$(GitVersion.MajorMinorPatch)'
       tag: '$(GitVersion.MajorMinorPatch)'
