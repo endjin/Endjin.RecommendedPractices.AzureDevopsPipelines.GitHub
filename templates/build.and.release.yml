@@ -4,11 +4,6 @@ parameters:
   service_connection_github: '' 
   solution_to_build: ''
 
-variables:
-  BuildConfiguration: 'Release'
-  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
-  SolutionToBuild: ${{ parameters.solution_to_build }}
-
   # We have dependencies on the following Environment Variables:
   # GITVERSION_PRERELEASETAG
   # BUILD_REPOSITORY_NAME
@@ -19,9 +14,15 @@ variables:
   # Endjin.ForcePublish
 
 jobs:
+
 - job: Setup Build Agent
+
   pool:
     vmImage: ${{ parameters.vmImage }}
+  
+  variables:
+    DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+
   steps:
   - task: DotNetCoreInstaller@0
     displayName: 'Install .NET Core SDK 2.2.401 (Global Tools error workaround)'
@@ -46,9 +47,17 @@ jobs:
   # Useful for debugging purposes
   #- powershell: 'gci Env:'
   #  displayName: 'Print Environment Variables'
+
 - job: Build
+
   pool:
     vmImage: ${{ parameters.vmImage }}
+
+  variables:
+    BuildConfiguration: 'Release'
+    SolutionToBuild: ${{ parameters.solution_to_build }}
+
+  steps:
   - task: DotNetCoreCLI@2
     displayName: 'Restore & Build'
     inputs:
@@ -56,7 +65,7 @@ jobs:
       projects: $(SolutionToBuild)
       arguments: '--configuration $(BuildConfiguration) /p:Version=$(GitVersion.SemVer)'
       versioningScheme: byBuildNumber
-  steps:
+
   - task: DotNetCoreCLI@2
     displayName: 'Run Executable Specifications'
     inputs:
@@ -93,8 +102,12 @@ jobs:
       PathtoPublish: '$(Build.ArtifactStagingDirectory)'
 
 - job: Release
+
   pool:
     vmImage: ${{ parameters.vmImage }}
+
+  steps:
+  
   - task: NuGetToolInstaller@0
     inputs:
       versionSpec: '5.1.0'
