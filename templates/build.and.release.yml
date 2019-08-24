@@ -23,10 +23,7 @@ jobs:
     # Endjin_Service_Connection_GitHub
     # Endjin.ForcePublish
   steps:
-  - task: DotNetCoreInstaller@0
-    displayName: 'Install .NET Core SDK 2.2.401 (Global Tools error workaround)'
-    inputs:
-      version: 2.2.401
+  - template: install.dotnet-global-tools.workaround.yml
 
   - task: DotNetCoreCLI@2
     displayName: 'Install GitVersion (Global Tools Linux Build Agent Workaround)'
