@@ -1,8 +1,16 @@
-variables:
-  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+jobs:
 
-steps:
-- task: DotNetCoreInstaller@0
-  displayName: 'Install .NET Core SDK 2.2.401 (Global Tools error workaround)'
-  inputs:
-    version: 2.2.401
+- job: ${{ parameters.job_name }}
+
+  pool: 
+    vmImage: ${{ parameters.job_name }}
+
+  variables:
+    DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+
+  steps:
+
+  - task: DotNetCoreInstaller@0
+    displayName: 'Install .NET Core SDK 2.2.401 (Global Tools error workaround)'
+    inputs:
+      version: 2.2.401

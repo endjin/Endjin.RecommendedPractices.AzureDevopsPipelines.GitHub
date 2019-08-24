@@ -24,6 +24,9 @@ jobs:
     # Endjin.ForcePublish
   steps:
   - template: install.dotnet-global-tools.workaround.yml
+    parameters:
+      job_name: Build
+      vmImage: ${{ parameters.vmImage }}
 
   - task: DotNetCoreCLI@2
     displayName: 'Install GitVersion (Global Tools Linux Build Agent Workaround)'
