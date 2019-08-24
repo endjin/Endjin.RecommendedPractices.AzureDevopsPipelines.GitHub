@@ -1,40 +1,41 @@
 parameters:
-  vmImage: 'windows-latest'
+  vmImage: ''
+  service_connection_github: '' 
 
-trigger: none
-pr: none
+jobs:
+- job: Tag for Release
 
-pool:
-  vmImage: ${{ parameters.vmImage }}
+  pool:
+    vmImage: ${{ parameters.vmImage }}
 
-variables:
-  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  variables:
+    DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
 
-steps:
+  steps:
 
-- task: DotNetCoreInstaller@0
-  displayName: 'Install .NET Core SDK 2.2.401 (Global Tools error workaround)'
-  inputs:
-    version: 2.2.401
+  - task: DotNetCoreInstaller@0
+    displayName: 'Install .NET Core SDK 2.2.401 (Global Tools error workaround)'
+    inputs:
+      version: 2.2.401
 
-- task: DotNetCoreCLI@2
-  displayName: 'Install GitVersion (Global Tools Linux Build Agent Workaround)'
-  inputs:
-    command: custom
-    custom: 'tool'
-    arguments: 'install -g GitVersion.Tool'
+  - task: DotNetCoreCLI@2
+    displayName: 'Install GitVersion (Global Tools Linux Build Agent Workaround)'
+    inputs:
+      command: custom
+      custom: 'tool'
+      arguments: 'install -g GitVersion.Tool'
 
-- script: 'dotnet-gitversion /output buildserver /nofetch' 
-  displayName: 'Run GitVersion'
+  - script: 'dotnet-gitversion /output buildserver /nofetch' 
+    displayName: 'Run GitVersion'
 
-- powershell: |
-    Write-Host "##vso[task.setvariable variable=Endjin_Repository_Name]$Env:BUILD_REPOSITORY_NAME"
-  displayName: 'Set Custom Environment Variables'
+  - powershell: |
+      Write-Host "##vso[task.setvariable variable=Endjin_Repository_Name]$Env:BUILD_REPOSITORY_NAME"
+    displayName: 'Set Custom Environment Variables'
 
-- task: GitHubTag@1
-  displayName: 'Tag Git'
-  inputs:
-    githubEndpoint: $(Endjin_Service_Connection_GitHub)
-    repositoryName: $(Endjin_Repository_Name)
-    commmit: 'Release v$(GitVersion.MajorMinorPatch)'
-    tag: '$(GitVersion.MajorMinorPatch)'
+  - task: GitHubTag@1
+    displayName: 'Tag Git'
+    inputs:
+      githubEndpoint: $(service_connection_github)
+      repositoryName: $(Endjin_Repository_Name)
+      commmit: 'Release v$(GitVersion.MajorMinorPatch)'
+      tag: '$(GitVersion.MajorMinorPatch)'
