@@ -1,12 +1,3 @@
-trigger:
-  branches:
-    include:
-    - master
-    - feature/*
-  tags:
-    include:
-    - '*'
-
 parameters:
   vmImage: 'ubuntu-latest'
 
