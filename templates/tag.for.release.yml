@@ -3,7 +3,7 @@ parameters:
   service_connection_github: '' 
 
 jobs:
-- job: Tag for Release
+- job: Tag_for_Release
 
   pool:
     vmImage: ${{ parameters.vmImage }}
