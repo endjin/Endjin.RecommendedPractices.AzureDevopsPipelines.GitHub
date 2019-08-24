@@ -1,15 +1,18 @@
 parameters:
-  vmImage: 'ubuntu-latest'
+  vmImage: ''
+  service_connection_nuget_org: '' 
+  service_connection_github: '' 
+  solution_to_build: ''
 
 jobs:
 - job: Build
   pool:
-    vmImage: ${{ parameters.vmImage }}
+    vmImage: ${{ parameters.solution_to_build }}
 
   variables:
     BuildConfiguration: 'Release'
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
-    SolutionToBuild: $(Endjin_Solution_To_Build)
+    SolutionToBuild: ${{ parameters.vmImage }}
 
     # We have dependencies on the following Environment Variables:
     # GITVERSION_PRERELEASETAG
@@ -95,7 +98,7 @@ jobs:
     displayName: 'Create GitHub Release'      
     condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['GitVersion.PreReleaseTag'], '')))
     inputs:
-      gitHubConnection: $(Endjin_Service_Connection_GitHub)
+      gitHubConnection: ${{ parameters.service_connection_nuget_org }}
       repositoryName: $(Endjin_Repository_Name)
       tagSource: manual
       tag: $(GitVersion.SemVer) 
@@ -110,6 +113,6 @@ jobs:
     inputs:
       command: push
       nuGetFeedType: external
-      publishFeedCredentials: $(Endjin_Service_Connection_NuGet_Org)
+      publishFeedCredentials: ${{ parameters.service_connection_nuget_org }}
       versioningScheme: byBuildNumber
       packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
