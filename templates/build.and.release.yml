@@ -4,19 +4,19 @@ parameters:
   service_connection_github: '' 
   solution_to_build: ''
 
-  variables:
-    BuildConfiguration: 'Release'
-    DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
-    SolutionToBuild: ${{ parameters.solution_to_build }}
+variables:
+  BuildConfiguration: 'Release'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+  SolutionToBuild: ${{ parameters.solution_to_build }}
 
-    # We have dependencies on the following Environment Variables:
-    # GITVERSION_PRERELEASETAG
-    # BUILD_REPOSITORY_NAME
+  # We have dependencies on the following Environment Variables:
+  # GITVERSION_PRERELEASETAG
+  # BUILD_REPOSITORY_NAME
 
-    # We have dependencies on the following Build Variables:
-    # Endjin_Service_Connection_NuGet_Org
-    # Endjin_Service_Connection_GitHub
-    # Endjin.ForcePublish
+  # We have dependencies on the following Build Variables:
+  # Endjin_Service_Connection_NuGet_Org
+  # Endjin_Service_Connection_GitHub
+  # Endjin.ForcePublish
 
 jobs:
 - job: Setup Build Agent
