@@ -98,7 +98,7 @@ jobs:
     displayName: 'Create GitHub Release'      
     condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['GitVersion.PreReleaseTag'], '')))
     inputs:
-      gitHubConnection: ${{ parameters.service_connection_nuget_org }}
+      gitHubConnection: ${{ parameters.service_connection_github }}
       repositoryName: $(Endjin_Repository_Name)
       tagSource: manual
       tag: $(GitVersion.SemVer) 
