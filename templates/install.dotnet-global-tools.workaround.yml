@@ -1,6 +1,6 @@
 steps:
 
 - task: DotNetCoreInstaller@0
-  displayName: 'Install .NET Core SDK 2.* (Global Tools error workaround)'
+  displayName: 'Install .NET Core SDK 2.2 (Global Tools error workaround)'
   inputs:
-    version: 2.*
+    version: 2.2
