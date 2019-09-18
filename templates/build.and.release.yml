@@ -1,5 +1,6 @@
 parameters:
   postCustomEnvironmentVariables: []
+  postSpecs: []
   vmImage: ''
   service_connection_nuget_org: '' 
   service_connection_github: '' 
@@ -66,6 +67,8 @@ jobs:
       codeCoverageTool: Cobertura
       summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/Cobertura.xml'
       reportDirectory: '$(Build.SourcesDirectory)/CodeCoverage'
+
+  - ${{ parameters.postSpecs }}
 
   - task: DotNetCoreCLI@2
     displayName: 'Create NuGet Packages'
