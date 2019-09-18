@@ -1,5 +1,9 @@
 parameters:
   postCustomEnvironmentVariables: []
+  postBuild: []
+  postSpecs: []
+  preSpecsReport: []
+  postPack: []
   vmImage: ''
   service_connection_nuget_org: '' 
   service_connection_github: '' 
@@ -47,6 +51,8 @@ jobs:
       arguments: '--configuration $(BuildConfiguration) /p:Version=$(GitVersion.SemVer)'
       versioningScheme: byBuildNumber
 
+  - ${{ parameters.postBuild }}
+
   - task: DotNetCoreCLI@2
     displayName: 'Run Executable Specifications'
     inputs:
@@ -54,6 +60,8 @@ jobs:
       projects: $(SolutionToBuild)
       arguments: '-c $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura'
       nobuild: true
+
+  - ${{ parameters.preSpecsReport }}
 
   - script: |
       dotnet tool install -g dotnet-reportgenerator-globaltool
@@ -67,6 +75,8 @@ jobs:
       summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/Cobertura.xml'
       reportDirectory: '$(Build.SourcesDirectory)/CodeCoverage'
 
+  - ${{ parameters.postSpecs }}
+
   - task: DotNetCoreCLI@2
     displayName: 'Create NuGet Packages'
     inputs:
@@ -76,6 +86,8 @@ jobs:
       nobuild: true
       versioningScheme: byEnvVar
       versionEnvVar: GitVersion.SemVer
+
+  - ${{ parameters.postPack }}
 
   - task: PublishBuildArtifacts@1
     displayName: 'Publish Artifact: Drop'
