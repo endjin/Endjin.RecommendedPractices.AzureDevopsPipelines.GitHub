@@ -110,6 +110,7 @@ jobs:
       assets: |
           $(Build.ArtifactStagingDirectory)/**/*.nupkg
           $(Build.ArtifactStagingDirectory)/**/*.snupkg
+          $(Build.ArtifactStagingDirectory)/**/*.zip
 
   - task: NuGetCommand@2
     displayName: 'Publish to nuget.org'
