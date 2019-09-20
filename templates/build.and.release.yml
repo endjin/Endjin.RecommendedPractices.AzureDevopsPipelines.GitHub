@@ -82,7 +82,7 @@ jobs:
     inputs:
       command: 'pack'
       projects: $(SolutionToBuild)
-      packDirectory: '$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)'
+      packDirectory: '$(Build.ArtifactStagingDirectory)/packages/$(Build.BuildID)'
       nobuild: true
       versioningScheme: byEnvVar
       versionEnvVar: GitVersion.SemVer
@@ -90,19 +90,9 @@ jobs:
   - ${{ parameters.postPack }}
 
   - task: PublishBuildArtifacts@1
-    displayName: 'Publish Packages'
+    displayName: 'Publish Artifact: Drop'
     inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)/Packages'
-
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish Deployment Assets'
-    inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)/Deployments'
-
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish Additional Release Assets'
-    inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)/AdditionalReleaseAssets'
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
 
   - task: NuGetToolInstaller@0
     inputs:
@@ -118,10 +108,8 @@ jobs:
       tag: $(GitVersion.SemVer) 
       isPreRelease: $(Endjin_IsPreRelease)
       assets: |
-          $(Build.ArtifactStagingDirectory)/Packages/**/*.nupkg
-          $(Build.ArtifactStagingDirectory)/Packages/**/*.snupkgs
-          $(Build.ArtifactStagingDirectory)/AdditionalReleaseAssets/**
-          $(Build.ArtifactStagingDirectory)/Deployments/**
+          $(Build.ArtifactStagingDirectory)/**/*.nupkg
+          $(Build.ArtifactStagingDirectory)/**/*.snupkg
 
   - task: NuGetCommand@2
     displayName: 'Publish to nuget.org'
@@ -131,4 +119,4 @@ jobs:
       nuGetFeedType: external
       publishFeedCredentials: ${{ parameters.service_connection_nuget_org }}
       versioningScheme: byBuildNumber
-      packagesToPush: '$(Build.ArtifactStagingDirectory)/Packages/**/*.nupkg'
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
