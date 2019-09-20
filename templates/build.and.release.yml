@@ -107,11 +107,6 @@ jobs:
     inputs:
       PathtoPublish: '$(Build.ArtifactStagingDirectory)/Release'
 
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish Release Assets'
-    inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)/Release'
-
   - task: NuGetToolInstaller@0
     inputs:
       versionSpec: '5.1.0'
