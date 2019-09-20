@@ -96,10 +96,10 @@ jobs:
   - task: CopyFiles@2
     displayName: 'Copy Nuget Packages To Release Folder'
     inputs:
-      SourceFolder: '$(Build.ArtifactStagingDirectory)/Packages'
+      SourceFolder: '$(Build.ArtifactStagingDirectory)'
       Contents: |
-        '**/*.nupkg'
-        '**/*.snupk'
+        Packages/**/*.nupkg
+        Packages/**/*.snupk
       TargetFolder: '$(Build.ArtifactStagingDirectory)/Release/NuGet'
 
   - task: PublishBuildArtifacts@1
