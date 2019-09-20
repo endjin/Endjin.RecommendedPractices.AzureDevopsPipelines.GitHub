@@ -86,17 +86,26 @@ jobs:
     inputs:
       command: 'pack'
       projects: $(SolutionToBuild)
-      packDirectory: '$(Build.ArtifactStagingDirectory)/NuGet/$(Build.BuildID)'
+      packDirectory: '$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)'
       nobuild: true
       versioningScheme: byEnvVar
       versionEnvVar: GitVersion.SemVer
 
   - ${{ parameters.postPack }}
 
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish Packages'
+  - task: CopyFiles@2
+    displayName: 'Copy Nuget Packages To Release Folder'
     inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)/NuGet'
+      SourceFolder: '$(ArtifactStagingDirectory)/Packages'
+      Contents: |
+        '**/*.nupkg'
+        '**/*.snupk'
+      TargetFolder: '$(ArtifactStagingDirectory)/Release/NuGet'
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Release Artifacts'
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)/Release'
 
   - task: PublishBuildArtifacts@1
     displayName: 'Publish Release Assets'
@@ -117,8 +126,6 @@ jobs:
       tag: $(GitVersion.SemVer) 
       isPreRelease: $(Endjin_IsPreRelease)
       assets: |
-          $(Build.ArtifactStagingDirectory)/NuGet/**/*.nupkg
-          $(Build.ArtifactStagingDirectory)/NuGet/**/*.snupk
           $(Build.ArtifactStagingDirectory)/Release/**
 
   - task: NuGetCommand@2
@@ -129,4 +136,4 @@ jobs:
       nuGetFeedType: external
       publishFeedCredentials: ${{ parameters.service_connection_nuget_org }}
       versioningScheme: byBuildNumber
-      packagesToPush: '$(Build.ArtifactStagingDirectory)/NuGet/**/*.nupkg'
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/Packages/**/*.nupkg'
