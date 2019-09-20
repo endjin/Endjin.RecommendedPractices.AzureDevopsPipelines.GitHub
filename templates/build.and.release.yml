@@ -37,12 +37,16 @@ jobs:
       Write-Host "##vso[task.setvariable variable=Endjin_Repository_Name]$Env:BUILD_REPOSITORY_NAME"
     displayName: 'Set Environment Variables'
 
+  - powershell: |
+      Write-Host "Initializing $(Build.ArtifactStagingDirectory)/Release"
+      New-Item -Path $(Build.ArtifactStagingDirectory) -Name "Release" -ItemType "directory"
+    displayName: 'Initialize Artifact Staging Release Directory'
+
   - ${{ parameters.postCustomEnvironmentVariables }}
 
   # Useful for debugging purposes
   #- powershell: 'gci Env:'
   #  displayName: 'Print Environment Variables'
-
   - task: DotNetCoreCLI@2
     displayName: 'Restore & Build'
     inputs:
@@ -89,10 +93,24 @@ jobs:
 
   - ${{ parameters.postPack }}
 
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish Artifact: Drop'
+  - task: CopyFiles@2
+    displayName: 'Copy Nuget Packages To Release Folder'
     inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      SourceFolder: '$(ArtifactStagingDirectory)/Packages'
+      Contents: |
+        '**/*.nupkg'
+        '**/*.snupk'
+      TargetFolder: '$(ArtifactStagingDirectory)/Release/NuGet'
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Release Artifacts'
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)/Release'
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Release Assets'
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)/Release'
 
   - task: NuGetToolInstaller@0
     inputs:
@@ -108,8 +126,7 @@ jobs:
       tag: $(GitVersion.SemVer) 
       isPreRelease: $(Endjin_IsPreRelease)
       assets: |
-          $(Build.ArtifactStagingDirectory)/**/*.nupkg
-          $(Build.ArtifactStagingDirectory)/**/*.snupkg
+          $(Build.ArtifactStagingDirectory)/Release/**
 
   - task: NuGetCommand@2
     displayName: 'Publish to nuget.org'
