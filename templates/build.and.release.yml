@@ -117,6 +117,8 @@ jobs:
       tag: $(GitVersion.SemVer) 
       isPreRelease: $(Endjin_IsPreRelease)
       assets: |
+          $(Build.ArtifactStagingDirectory)/NuGet/**/*.nupkg
+          $(Build.ArtifactStagingDirectory)/NuGet/**/*.snupk
           $(Build.ArtifactStagingDirectory)/Release/**
 
   - task: NuGetCommand@2
