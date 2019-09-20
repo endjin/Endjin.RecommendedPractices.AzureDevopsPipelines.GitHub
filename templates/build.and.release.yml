@@ -37,12 +37,16 @@ jobs:
       Write-Host "##vso[task.setvariable variable=Endjin_Repository_Name]$Env:BUILD_REPOSITORY_NAME"
     displayName: 'Set Environment Variables'
 
+  - powershell: |
+      Write-Host "Initializing $(Build.ArtifactStagingDirectory)/Release"
+      New-Item -Path $(Build.ArtifactStagingDirectory) -Name "Release" -ItemType "directory"
+    displayName: 'Initialize Artifact Staging Release Directory'
+
   - ${{ parameters.postCustomEnvironmentVariables }}
 
   # Useful for debugging purposes
   #- powershell: 'gci Env:'
   #  displayName: 'Print Environment Variables'
-
   - task: DotNetCoreCLI@2
     displayName: 'Restore & Build'
     inputs:
@@ -82,7 +86,7 @@ jobs:
     inputs:
       command: 'pack'
       projects: $(SolutionToBuild)
-      packDirectory: '$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)'
+      packDirectory: '$(Build.ArtifactStagingDirectory)/NuGet/$(Build.BuildID)'
       nobuild: true
       versioningScheme: byEnvVar
       versionEnvVar: GitVersion.SemVer
@@ -92,17 +96,12 @@ jobs:
   - task: PublishBuildArtifacts@1
     displayName: 'Publish Packages'
     inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)/Packages'
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)/NuGet'
 
   - task: PublishBuildArtifacts@1
-    displayName: 'Publish Deployment Assets'
+    displayName: 'Publish Release Assets'
     inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)/Deployments'
-
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish Additional Release Assets'
-    inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)/AdditionalReleaseAssets'
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)/Release'
 
   - task: NuGetToolInstaller@0
     inputs:
@@ -118,10 +117,7 @@ jobs:
       tag: $(GitVersion.SemVer) 
       isPreRelease: $(Endjin_IsPreRelease)
       assets: |
-          $(Build.ArtifactStagingDirectory)/Packages/**/*.nupkg
-          $(Build.ArtifactStagingDirectory)/Packages/**/*.snupkgs
-          $(Build.ArtifactStagingDirectory)/AdditionalReleaseAssets/**
-          $(Build.ArtifactStagingDirectory)/Deployments/**
+          $(Build.ArtifactStagingDirectory)/Release/**
 
   - task: NuGetCommand@2
     displayName: 'Publish to nuget.org'
@@ -131,4 +127,4 @@ jobs:
       nuGetFeedType: external
       publishFeedCredentials: ${{ parameters.service_connection_nuget_org }}
       versioningScheme: byBuildNumber
-      packagesToPush: '$(Build.ArtifactStagingDirectory)/Packages/**/*.nupkg'
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/NuGet/**/*.nupkg'
