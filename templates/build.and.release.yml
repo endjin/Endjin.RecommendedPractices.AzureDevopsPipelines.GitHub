@@ -86,7 +86,7 @@ jobs:
     inputs:
       command: 'pack'
       projects: $(SolutionToBuild)
-      packDirectory: '$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)'
+      packDirectory: '$(Build.ArtifactStagingDirectory)/packages/$(Build.BuildID)'
       nobuild: true
       versioningScheme: byEnvVar
       versionEnvVar: GitVersion.SemVer
@@ -136,4 +136,4 @@ jobs:
       nuGetFeedType: external
       publishFeedCredentials: ${{ parameters.service_connection_nuget_org }}
       versioningScheme: byBuildNumber
-      packagesToPush: '$(Build.ArtifactStagingDirectory)/Packages/**/*.nupkg'
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg'
