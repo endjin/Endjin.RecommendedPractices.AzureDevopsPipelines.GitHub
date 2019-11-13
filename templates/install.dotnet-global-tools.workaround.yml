@@ -1,6 +1,13 @@
 steps:
 
 - task: UseDotNet@2
+  displayName: 'Install .NET Core SDK 2.x (Global Tools error workaround)'
+  inputs:
+    packageType: sdk
+    version: 2.x
+    installationPath: $(Agent.ToolsDirectory)/dotnet
+
+- task: UseDotNet@2
   displayName: 'Install .NET Core SDK 3.x (Global Tools error workaround)'
   inputs:
     packageType: sdk
