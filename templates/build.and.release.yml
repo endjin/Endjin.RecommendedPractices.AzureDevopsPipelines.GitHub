@@ -54,6 +54,7 @@ jobs:
       projects: $(SolutionToBuild)
       arguments: '--configuration $(BuildConfiguration) /p:Version=$(GitVersion.SemVer)'
       versioningScheme: byBuildNumber
+      buildProperties: 'EndjinRepositoryName="$(Build.Repository.Name)"'
 
   - ${{ parameters.postBuild }}
 
@@ -90,6 +91,7 @@ jobs:
       nobuild: true
       versioningScheme: byEnvVar
       versionEnvVar: GitVersion.SemVer
+      buildProperties: 'EndjinRepositoryName="$(Build.Repository.Name)"'
 
   - ${{ parameters.postPack }}
 
