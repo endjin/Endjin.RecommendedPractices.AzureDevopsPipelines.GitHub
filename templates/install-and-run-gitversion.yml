@@ -17,6 +17,6 @@ steps:
 # You can't turn this off, so we have to adapt to it. This just republishes them by their
 # old names, meaning anything previously depending on those names will continue to work.
 - powershell: |
-    Write-Host "##vso[task.setvariable variable=GitVersion_SemVer]$(RunGitVersion.GitVersion.SemVer)"
-    Write-Host "##vso[task.setvariable variable=GitVersion_PreReleaseTag]$(RunGitVersion.GitVersion.PreReleaseTag)"
+    Write-Host "##vso[task.setvariable variable=GitVersion.SemVer]$(RunGitVersion.GitVersion.SemVer)"
+    Write-Host "##vso[task.setvariable variable=GitVersion.PreReleaseTag]$(RunGitVersion.GitVersion.PreReleaseTag)"
   displayName: 'Set Environment Variables'
