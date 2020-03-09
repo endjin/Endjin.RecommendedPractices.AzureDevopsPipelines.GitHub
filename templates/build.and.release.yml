@@ -45,8 +45,10 @@ jobs:
   - ${{ parameters.postCustomEnvironmentVariables }}
 
   # Useful for debugging purposes
-  #- powershell: 'gci Env:'
-  #  displayName: 'Print Environment Variables'
+  - powershell: 'gci Env:'
+    condition: or(variables['Endjin.BuildDiagnostics'], variables['Endjin.ShowEnvironment'])
+    displayName: 'Print Environment Variables'
+
   - task: DotNetCoreCLI@2
     displayName: 'Restore & Build'
     inputs:
