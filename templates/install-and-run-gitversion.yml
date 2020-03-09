@@ -5,7 +5,18 @@ steps:
   inputs:
     command: custom
     custom: 'tool'
-    arguments: 'install -g GitVersion.Tool --version 5.1.3'
+    arguments: 'install -g GitVersion.Tool'
 
 - script: 'dotnet-gitversion /output buildserver /nofetch' 
+  name: RunGitVersion
   displayName: 'Run GitVersion'
+
+# Starting with GitVersion 5.2.0, GitVersion includes isOutput=true on all of the variables it
+# sets, which is a breaking change. It means that these variables are no longer available with
+# the same name - they must now be qualified by the name of the task that produced them.
+# You can't turn this off, so we have to adapt to it. This just republishes them by their
+# old names, meaning anything previously depending on those names will continue to work.
+  - powershell: |
+      Write-Host "##vso[task.setvariable variable=GitVersion_SemVer]$(RunGitVersion.GitVersion.SemVer)"
+      Write-Host "##vso[task.setvariable variable=GitVersion_PreReleaseTag]$(RunGitVersion.GitVersion.PreReleaseTag)"
+    displayName: 'Set Environment Variables'
