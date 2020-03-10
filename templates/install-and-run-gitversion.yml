@@ -8,7 +8,7 @@ steps:
     arguments: 'install -g GitVersion.Tool --version 5.2.0'
 
 - script: 'dotnet-gitversion /output buildserver /nofetch'
-  name: 'GitVersion'
+  name: 'RunGitVersion'
   displayName: 'Run GitVersion'
 
 # Starting with GitVersion 5.2.0, GitVersion includes isOutput=true on all of the variables it
