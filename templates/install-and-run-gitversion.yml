@@ -19,4 +19,5 @@ steps:
 - powershell: |
     Write-Host "##vso[task.setvariable variable=GitVersion.SemVer]$(RunGitVersion.GitVersion.SemVer)"
     Write-Host "##vso[task.setvariable variable=GitVersion.PreReleaseTag]$(RunGitVersion.GitVersion.PreReleaseTag)"
+    Write-Host "##vso[task.setvariable variable=GitVersion.MajorMinorPatch]$(RunGitVersion.GitVersion.MajorMinorPatch)"
   displayName: 'Publish GitVersion variables'
