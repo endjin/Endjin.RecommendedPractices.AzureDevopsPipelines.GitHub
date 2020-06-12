@@ -8,6 +8,10 @@ parameters:
   service_connection_nuget_org: '' 
   service_connection_github: '' 
   solution_to_build: ''
+  # Note: temporary workround due to https://github.com/endjin/Endjin.RecommendedPractices.AzureDevopsPipelines.GitHub/issues/22
+  netSdkVersion: '3.1.102'
+  # Revert to this once the issue has been resolved
+  netSdkVersion: '3.x'
 
 jobs:
 - job: Build
@@ -30,6 +34,8 @@ jobs:
     # Endjin.ForcePublish
   steps:
   - template: install.dotnet-global-tools.workaround.yml
+    parameters:
+      netSdkVersion: ${{ parameters.netSdkVersion }}
   - template: install-and-run-gitversion.yml
 
   - powershell: |

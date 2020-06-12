@@ -1,3 +1,6 @@
+parameters:
+  netSdkVersion: '3.x'
+
 steps:
 
 - task: UseDotNet@2
@@ -11,8 +14,5 @@ steps:
   displayName: 'Install .NET Core SDK 3.x (Global Tools error workaround)'
   inputs:
     packageType: sdk
-    # Note: temporary workround due to https://github.com/endjin/Endjin.RecommendedPractices.AzureDevopsPipelines.GitHub/issues/22
-    version: 3.1.102
-    # Revert to this once the issue has been resolved
-    #version: 3.x
+    version: ${{ parameters.netSdkVersion }}
     installationPath: $(Agent.ToolsDirectory)/dotnet
