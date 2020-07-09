@@ -106,7 +106,7 @@ jobs:
       SourceFolder: '$(Build.ArtifactStagingDirectory)'
       Contents: |
         Packages/**/*.nupkg
-        Packages/**/*.snupk
+        Packages/**/*.snupkg
       TargetFolder: '$(Build.ArtifactStagingDirectory)/Release/NuGet'
 
   - task: PublishBuildArtifacts@1
