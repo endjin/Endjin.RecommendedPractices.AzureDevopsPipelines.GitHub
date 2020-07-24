@@ -35,7 +35,7 @@ jobs:
       netSdkVersion: ${{ parameters.netSdkVersion }}
   - template: install-and-run-gitversion.yml
 
- - ${{ parameters.preCustomEnvironmentVariables }}
+  - ${{ parameters.preCustomEnvironmentVariables }}
 
   - powershell: |
       Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$((-not ([string]::IsNullOrEmpty($Env:GITVERSION_PRERELEASETAG))))"
