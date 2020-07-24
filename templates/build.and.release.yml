@@ -1,9 +1,22 @@
 parameters:
+  preCustomEnvironmentVariables: []
   postCustomEnvironmentVariables: []
+  preBuild: []
   postBuild: []
-  postSpecs: []
+  preRunExecutableSpecs: []
+  postRunExecutableSpecs: []
   preSpecsReport: []
+  postSpecsReport: []
+  prePublishCodeCoverageReport: []
+  postPublishCodeCoverageReport: []
+  postSpecs: []
+  preCreateNuGetPackages: []
+  postCreateNuGetPackages: []
   postPack: []
+  preCopyNugetPackages: []
+  postCopyNugetPackages: []
+  prePublishReleaseArtifacts: []
+  postPublishReleaseArtifacts: []
   vmImage: ''
   service_connection_nuget_org: '' 
   service_connection_github: '' 
