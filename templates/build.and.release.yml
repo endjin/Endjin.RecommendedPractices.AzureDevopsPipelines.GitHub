@@ -35,6 +35,8 @@ jobs:
       netSdkVersion: ${{ parameters.netSdkVersion }}
   - template: install-and-run-gitversion.yml
 
+ - ${{ parameters.preCustomEnvironmentVariables }}
+
   - powershell: |
       Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$((-not ([string]::IsNullOrEmpty($Env:GITVERSION_PRERELEASETAG))))"
       Write-Host "##vso[task.setvariable variable=Endjin_Repository_Name]$Env:BUILD_REPOSITORY_NAME"
@@ -52,6 +54,8 @@ jobs:
     condition: or(variables['Endjin.BuildDiagnostics'], variables['Endjin.ShowEnvironment'])
     displayName: 'Print Environment Variables'
 
+  - ${{ parameters.preBuild }}
+
   - task: DotNetCoreCLI@2
     displayName: 'Restore & Build'
     inputs:
@@ -62,6 +66,8 @@ jobs:
       buildProperties: 'EndjinRepositoryUrl="$(Build.Repository.Uri)"'
 
   - ${{ parameters.postBuild }}
+  
+  - ${{ parameters.preRunExecutableSpecs }}
 
   - task: DotNetCoreCLI@2
     displayName: 'Run Executable Specifications'
@@ -70,6 +76,8 @@ jobs:
       projects: $(SolutionToBuild)
       arguments: '-c $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura'
       nobuild: true
+  
+  - ${{ parameters.postRunExecutableSpecs }}
 
   - ${{ parameters.preSpecsReport }}
 
@@ -78,6 +86,10 @@ jobs:
       reportgenerator "-reports:$(Build.SourcesDirectory)/**/**/coverage.cobertura.xml" "-targetdir:$(Build.SourcesDirectory)/CodeCoverage" "-reporttypes:HtmlInline_AzurePipelines;Cobertura"
     displayName: 'Generate Code Coverage Report'
 
+  - ${{ parameters.postSpecsReport }}
+
+  - ${{ parameters.prePublishCodeCoverageReport }}
+
   - task: PublishCodeCoverageResults@1
     displayName: 'Publish Code Coverage Report'
     inputs:
@@ -85,7 +97,11 @@ jobs:
       summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/Cobertura.xml'
       reportDirectory: '$(Build.SourcesDirectory)/CodeCoverage'
 
+  - ${{ parameters.postPublishCodeCoverageReport }}
+
   - ${{ parameters.postSpecs }}
+
+  - ${{ parameters.preCreateNuGetPackages }}
 
   - task: DotNetCoreCLI@2
     displayName: 'Create NuGet Packages'
@@ -98,7 +114,11 @@ jobs:
       versionEnvVar: GitVersion.SemVer
       buildProperties: 'EndjinRepositoryUrl="$(Build.Repository.Uri)"'
 
+  - ${{ parameters.postCreateNuGetPackages }}
+
   - ${{ parameters.postPack }}
+
+  - ${{ parameters.preCopyNugetPackages }}
 
   - task: CopyFiles@2
     displayName: 'Copy Nuget Packages To Release Folder'
@@ -109,10 +129,15 @@ jobs:
         Packages/**/*.snupkg
       TargetFolder: '$(Build.ArtifactStagingDirectory)/Release/NuGet'
 
+  - ${{ parameters.postCopyNugetPackages }}
+  - ${{ parameters.prePublishReleaseArtifacts }}
+
   - task: PublishBuildArtifacts@1
     displayName: 'Publish Release Artifacts'
     inputs:
       PathtoPublish: '$(Build.ArtifactStagingDirectory)/Release'
+
+  - ${{ parameters.postPublishReleaseArtifacts }}
 
   - task: NuGetToolInstaller@0
     inputs:
