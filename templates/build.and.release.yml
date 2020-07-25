@@ -176,4 +176,4 @@ jobs:
       nuGetFeedType: external
       publishFeedCredentials: ${{ parameters.service_connection_nuget_org }}
       versioningScheme: byBuildNumber
-      packagesToPush: '$(Build.ArtifactStagingDirectory)/Packages/**/*.nupkg'
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/Release/**/*.nupkg'
