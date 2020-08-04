@@ -17,6 +17,10 @@ parameters:
   postCopyNugetPackages: []
   prePublishReleaseArtifacts: []
   postPublishReleaseArtifacts: []
+  preCreateGitHubRelease: []
+  postCreateGitHubRelease: []
+  prePublishNugetPackages: []
+  postPublishNugetPackages: []
   vmImage: ''
   service_connection_nuget_org: '' 
   service_connection_github: '' 
@@ -155,6 +159,8 @@ jobs:
   - task: NuGetToolInstaller@0
     inputs:
       versionSpec: '5.1.0'
+  
+  - ${{ parameters.preCreateGitHubRelease }}
 
   - task: GithubRelease@0 
     displayName: 'Create GitHub Release'      
@@ -168,6 +174,10 @@ jobs:
       assets: |
           $(Build.ArtifactStagingDirectory)/Release/**
 
+  - ${{ parameters.postCreateGitHubRelease }}
+
+  - ${{ parameters.prePublishNugetPackages }}
+
   - task: NuGetCommand@2
     displayName: 'Publish to nuget.org'
     condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['GitVersion.PreReleaseTag'], '')))
@@ -177,3 +187,5 @@ jobs:
       publishFeedCredentials: ${{ parameters.service_connection_nuget_org }}
       versioningScheme: byBuildNumber
       packagesToPush: '$(Build.ArtifactStagingDirectory)/Release/**/*.nupkg'
+
+  - ${{ parameters.postPublishNugetPackages }}
