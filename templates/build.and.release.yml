@@ -131,13 +131,6 @@ jobs:
   #     versionEnvVar: GitVersion.SemVer
   #     buildProperties: 'EndjinRepositoryUrl="$(Build.Repository.Uri)";Version=$(GitVersion.SemVer)'
 
-  - task: DotNetCoreCLI@2
-    displayName: 'Create NuGet Packages (custom)'
-    inputs:
-      command: 'custom'
-      custom: pack
-      arguments: '-c $(BuildConfiguration) --no-build --no-restore --output $(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID) $(SolutionToBuild)'
-
   - ${{ parameters.postCreateNuGetPackages }}
 
   - ${{ parameters.postPack }}
