@@ -127,8 +127,8 @@ jobs:
       projects: $(SolutionToBuild)
       outputDir: '$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)'
       nobuild: true
-      versioningScheme: byEnvVar
-      versionEnvVar: GitVersion.SemVer
+      arguments: '--configuration $(BuildConfiguration) /p:Version=$(GitVersion.SemVer)'
+      versioningScheme: byBuildNumber
       buildProperties: 'EndjinRepositoryUrl="$(Build.Repository.Uri)"'
 
   - ${{ parameters.postCreateNuGetPackages }}
