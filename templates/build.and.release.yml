@@ -126,6 +126,7 @@ jobs:
       command: 'pack'
       projects: $(SolutionToBuild)
       outputDir: '$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)'
+      arguments: '--configuration $(BuildConfiguration)'
       nobuild: true
       versioningScheme: byEnvVar
       versionEnvVar: GitVersion.SemVer
@@ -145,6 +146,15 @@ jobs:
         Packages/**/*.nupkg
         Packages/**/*.snupkg
       TargetFolder: '$(Build.ArtifactStagingDirectory)/Release/NuGet'
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Install nupkgversion global tool'
+    inputs:
+      command: custom
+      custom: tool install -g nupkgversion
+
+  - script: 'nupkgversion "$(Build.ArtifactStagingDirectory)/Release/NuGet" https://api.nuget.org/v3/index.json'
+    displayName: 'Run nupkgversion global tool'
 
   - ${{ parameters.postCopyNugetPackages }}
   - ${{ parameters.prePublishReleaseArtifacts }}
