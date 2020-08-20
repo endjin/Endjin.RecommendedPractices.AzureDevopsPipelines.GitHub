@@ -92,6 +92,8 @@ jobs:
       command: 'test'
       projects: $(SolutionToBuild)
       arguments: '-c $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura'
+      versioningScheme: byEnvVar
+      versionEnvVar: GitVersion.SemVer
       nobuild: true
   
   - ${{ parameters.postRunExecutableSpecs }}
@@ -120,16 +122,16 @@ jobs:
 
   - ${{ parameters.preCreateNuGetPackages }}
 
-  # - task: DotNetCoreCLI@2
-  #   displayName: 'Create NuGet Packages'
-  #   inputs:
-  #     command: 'pack'
-  #     projects: $(SolutionToBuild)
-  #     outputDir: '$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)'
-  #     nobuild: true
-  #     versioningScheme: byEnvVar
-  #     versionEnvVar: GitVersion.SemVer
-  #     buildProperties: 'EndjinRepositoryUrl="$(Build.Repository.Uri)";Version=$(GitVersion.SemVer)'
+  - task: DotNetCoreCLI@2
+    displayName: 'Create NuGet Packages'
+    inputs:
+      command: 'pack'
+      projects: $(SolutionToBuild)
+      outputDir: '$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)'
+      nobuild: true
+      versioningScheme: byEnvVar
+      versionEnvVar: GitVersion.SemVer
+      buildProperties: 'EndjinRepositoryUrl="$(Build.Repository.Uri)";Version=$(GitVersion.SemVer)'
 
   - ${{ parameters.postCreateNuGetPackages }}
 
