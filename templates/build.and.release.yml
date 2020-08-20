@@ -122,10 +122,11 @@ jobs:
   - task: DotNetCoreCLI@2
     displayName: 'Create NuGet Packages'
     inputs:
-      command: 'pack'
+      command: custom
+      custom: pack
       projects: $(SolutionToBuild)
       outputDir: '$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)'
-      arguments: '--no-build --no-restore'
+      arguments: '-c $(BuildConfiguration) --no-build --no-restore'
       versioningScheme: byEnvVar
       versionEnvVar: GitVersion.SemVer
       buildProperties: 'EndjinRepositoryUrl="$(Build.Repository.Uri)"'
