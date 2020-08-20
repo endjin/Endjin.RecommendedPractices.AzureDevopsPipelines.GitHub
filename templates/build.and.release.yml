@@ -120,16 +120,23 @@ jobs:
 
   - ${{ parameters.preCreateNuGetPackages }}
 
+  # - task: DotNetCoreCLI@2
+  #   displayName: 'Create NuGet Packages'
+  #   inputs:
+  #     command: 'pack'
+  #     projects: $(SolutionToBuild)
+  #     outputDir: '$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)'
+  #     nobuild: true
+  #     versioningScheme: byEnvVar
+  #     versionEnvVar: GitVersion.SemVer
+  #     buildProperties: 'EndjinRepositoryUrl="$(Build.Repository.Uri)";Version=$(GitVersion.SemVer)'
+
   - task: DotNetCoreCLI@2
-    displayName: 'Create NuGet Packages'
+    displayName: 'Create NuGet Packages (custom)'
     inputs:
-      command: 'pack'
-      projects: $(SolutionToBuild)
-      outputDir: '$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)'
-      nobuild: true
-      versioningScheme: byEnvVar
-      versionEnvVar: GitVersion.SemVer
-      buildProperties: 'EndjinRepositoryUrl="$(Build.Repository.Uri)";Version=$(GitVersion.SemVer)'
+      command: 'custom'
+      custom: pack
+      arguments: '-c $(BuildConfiguration) --no-build --no-restore --output $(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID) $(SolutionToBuild)
 
   - ${{ parameters.postCreateNuGetPackages }}
 
