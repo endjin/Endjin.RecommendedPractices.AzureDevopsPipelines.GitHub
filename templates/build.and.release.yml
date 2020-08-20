@@ -91,10 +91,8 @@ jobs:
     inputs:
       command: 'test'
       projects: $(SolutionToBuild)
-      arguments: '-c $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura'
-      versioningScheme: byEnvVar
-      versionEnvVar: GitVersion.SemVer
-      nobuild: true
+      arguments: '-c $(BuildConfiguration) --no-build --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura'
+      # buildProperties: 'Version=$(GitVersion.SemVer)'
   
   - ${{ parameters.postRunExecutableSpecs }}
 
