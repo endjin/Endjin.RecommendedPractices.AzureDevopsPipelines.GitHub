@@ -91,8 +91,7 @@ jobs:
     inputs:
       command: 'test'
       projects: $(SolutionToBuild)
-      arguments: '-c $(BuildConfiguration) --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura'
-      nobuild: true
+      arguments: '-c $(BuildConfiguration) --no-build --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura'
   
   - ${{ parameters.postRunExecutableSpecs }}
 
@@ -126,7 +125,7 @@ jobs:
       command: 'pack'
       projects: $(SolutionToBuild)
       outputDir: '$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)'
-      nobuild: true
+      arguments: '--no-build --no-restore'
       versioningScheme: byEnvVar
       versionEnvVar: GitVersion.SemVer
       buildProperties: 'EndjinRepositoryUrl="$(Build.Repository.Uri)"'
