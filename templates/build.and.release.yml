@@ -136,7 +136,7 @@ jobs:
     inputs:
       command: 'custom'
       custom: pack
-      arguments: '-c $(BuildConfiguration) --no-build --no-restore --output $(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID) $(SolutionToBuild)
+      arguments: '-c $(BuildConfiguration) --no-build --no-restore --output $(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID) $(SolutionToBuild)'
 
   - ${{ parameters.postCreateNuGetPackages }}
 
