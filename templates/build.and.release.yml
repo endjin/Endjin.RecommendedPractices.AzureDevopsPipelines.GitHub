@@ -126,7 +126,7 @@ jobs:
       command: 'pack'
       projects: $(SolutionToBuild)
       outputDir: '$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)'
-      arguments: '--configuration $(BuildConfiguration)'
+      arguments: '--configuration $(BuildConfiguration) /p:Version=$(GitVersion.SemVer)'
       # nobuild: true
       versioningScheme: byEnvVar
       versionEnvVar: GitVersion.SemVer
