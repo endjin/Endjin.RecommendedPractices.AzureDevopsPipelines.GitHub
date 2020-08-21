@@ -148,7 +148,7 @@ jobs:
       custom: tool
       arguments: install -g nupkgversion
 
-  - script: 'nupkgversion "$(Build.ArtifactStagingDirectory)/Release/NuGet" https://api.nuget.org/v3/index.json'
+  - script: 'nupkgversion "$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)" https://api.nuget.org/v3/index.json'
     displayName: 'Run nupkgversion'
 
   - ${{ parameters.postPack }}
