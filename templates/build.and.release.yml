@@ -86,6 +86,8 @@ jobs:
   
   - ${{ parameters.preRunExecutableSpecs }}
 
+  # The 'test' command was not honouring the 'nobuild' setting, so now we pass is via the
+  # 'arguments' parameter which it does support. 
   - task: DotNetCoreCLI@2
     displayName: 'Run Executable Specifications'
     inputs:
@@ -119,16 +121,23 @@ jobs:
 
   - ${{ parameters.preCreateNuGetPackages }}
 
+  # We switched to using the 'custom' variant as the 'pack' command was not honoring the 'nobuild' setting, and 
+  # it also does not support the 'arguments' parameter. However, using 'custom' means we have to build the
+  # command-line ourselves.
   - task: DotNetCoreCLI@2
     displayName: 'Create NuGet Packages'
     inputs:
-      command: 'pack'
+      command: custom
+      custom: pack
       projects: $(SolutionToBuild)
-      outputDir: '$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)'
-      arguments: '--no-build --no-restore'
-      versioningScheme: byEnvVar
-      versionEnvVar: GitVersion.SemVer
-      buildProperties: 'EndjinRepositoryUrl="$(Build.Repository.Uri)"'
+      arguments: >
+        -c $(BuildConfiguration)
+        --no-build
+        --no-restore
+        --output $(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)
+        /p:EndjinRepositoryUrl="$(Build.Repository.Uri)"
+        /p:PackageVersion=$(GitVersion.SemVer)
+        --verbosity Detailed
 
   - ${{ parameters.postCreateNuGetPackages }}
 
