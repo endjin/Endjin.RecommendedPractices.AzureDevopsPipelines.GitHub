@@ -125,11 +125,14 @@ jobs:
       command: custom
       custom: pack
       projects: $(SolutionToBuild)
-      outputDir: '$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)'
-      arguments: '-c $(BuildConfiguration) --no-build --no-restore'
-      versioningScheme: byEnvVar
-      versionEnvVar: GitVersion.SemVer
-      buildProperties: 'EndjinRepositoryUrl="$(Build.Repository.Uri)"'
+      arguments: >
+        -c $(BuildConfiguration)
+        --no-build
+        --no-restore
+        --output $(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)
+        /p:EndjinRepositoryUrl="$(Build.Repository.Uri)"
+        /p:PackageVersion=$(GitVersion.SemVer)
+        --verbosity Detailed
 
   - ${{ parameters.postCreateNuGetPackages }}
 
