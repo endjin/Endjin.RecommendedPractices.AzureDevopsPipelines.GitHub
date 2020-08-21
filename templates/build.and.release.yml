@@ -140,6 +140,16 @@ jobs:
         --verbosity Detailed
 
   - ${{ parameters.postCreateNuGetPackages }}
+  
+  - task: DotNetCoreCLI@2
+    displayName: 'Install nupkgversion global tool'
+    inputs:
+      command: custom
+      custom: tool
+      arguments: install -g nupkgversion
+
+  - script: 'nupkgversion "$(Build.ArtifactStagingDirectory)/Release/NuGet" https://api.nuget.org/v3/index.json'
+    displayName: 'Run nupkgversion'
 
   - ${{ parameters.postPack }}
 
