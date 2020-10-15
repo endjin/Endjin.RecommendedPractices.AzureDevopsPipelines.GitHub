@@ -1,0 +1,32 @@
+parameters:
+  artifactSourceProjectId:
+  artifactSourcePipelineId:
+  artifactSourceBranchName:
+  artifactSourceBuildId:
+  artifactName:
+  deployToolsFolder: _deployment
+
+stages:
+- stage: Prepare_Deployment_System
+  displayName: Prepare deployment system
+  jobs:
+  - job: prepare_deploy_sources
+    displayName: Prepare deployment sources
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - template: download-source-artifact-step.yml
+      parameters:
+        sourceProjectId: ${{ parameters.artifactSourceProjectId }}
+        sourcePipelineId: ${{ parameters.artifactSourcePipelineId }}
+        sourceBranchName: ${{ parameters.artifactSourceBranchName }}
+        sourceBuildId: ${{ parameters.artifactSourceBuildId }}
+        artifactName: ${{ parameters.artifactName }}
+
+    - publish: $(Pipeline.Workspace)/${{ parameters.artifactName }}
+      artifact: ${{ parameters.artifactName }}
+      displayName: Publish source build artifact
+
+    - publish: $(Build.SourcesDirectory)/${{ parameters.deployToolsFolder }}
+      artifact: deployment
+      displayName: Publish deployment tooling artifact

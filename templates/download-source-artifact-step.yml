@@ -1,0 +1,64 @@
+parameters:
+  sourceProjectId: $(System.TeamProjectId)
+  sourcePipelineId:
+  sourceBranchName: $(Build.SourceBranch)
+  sourceBuildId: latest
+  artifactName: sourceArtifacts
+
+steps:
+- powershell: |
+    Write-Host "sourceProjectId: $($env:sourceProjectId)"
+    Write-Host "sourcePipelineId: $($env:sourcePipelineId)"
+    Write-Host "sourceBranchName: $($env:sourceBranchName)"
+    Write-Host "sourceBuildId: $($env:sourceBuildId)"
+    Write-Host "artifactName: $($env:artifactName)"
+  displayName: Log Source Artifact Settings
+  env:
+    sourceProjectId: ${{ parameters.sourceProjectId }}
+    sourcePipelineId: ${{ parameters.sourcePipelineId }}
+    sourceBranchName: ${{ parameters.sourceBranchName }}
+    sourceBuildId: ${{ parameters.sourceBuildId }}
+    artifactName: ${{ parameters.artifactName }}
+
+- task: DownloadPipelineArtifact@2
+  name: download_build_artifacts
+  displayName: Download Source Build Artifacts
+  inputs:
+    buildType: 'specific'
+    # use the pipeline resource to get the basic pipeline details we need
+    project: ${{ parameters.sourceProjectId }}
+    definition: ${{ parameters.sourcePipelineId }}
+    targetPath: '$(Pipeline.Workspace)/${{ parameters.artifactName }}'
+    
+    # set 'buildVersionToDownload' based on 'sourceBuildId' pipeline parameter
+    ${{ if eq(parameters.sourceBuildId, 'latest') }}:
+      buildVersionToDownload: 'latestFromBranch'
+    ${{ if ne(parameters.sourceBuildId, 'latest') }}:
+      buildVersionToDownload: 'specific'
+      runId: '${{ parameters.sourceBuildId }}'
+    
+    # $(Build.SourceBranch) is the full git ref of the current branch (e.g. refs/heads/feature/myfeature)
+    # $(Build.SourceBranchName) strips everything up to and including the last '/' character of $(Build.SourceBranch)
+    # (e.g. 'refs/heads/feature/myfeature' becomes 'myfeature'), which is breaks the typical feature branch naming-convention
+    # So we need to do this rather clumsy conditional block, which allows the 'sourceBranchName' parameter to be just the simple
+    # branch name, rather than users having to remember to type in the full git ref
+    ${{ if eq(parameters.sourceBranchName, '$(Build.SourceBranch)') }}:
+      branchName: '$(Build.SourceBranch)'
+    ${{ if ne(parameters.sourceBranchName, '$(Build.SourceBranch)') }}:
+      branchName: 'refs/heads/${{ parameters.sourceBranchName }}'
+
+- powershell: |
+    # Log the buildId being used
+    Write-Host "Downloading artifacts from BuildId: $($env:ARTIFACTS_BUILD_NUM)"
+
+    $sourceBuildUri = "{0}{1}/_build/results?buildId={2}&view=artifacts&type=publishedArtifacts" -f $env:SYSTEM_COLLECTIONURI, $env:SYSTEM_TEAMPROJECT, $env:ARTIFACTS_BUILD_NUM
+    Write-Host "BuildUrl: $sourceBuildUri"
+
+    # Add a custom section to the build summary, as the downloaded artifacts will not appear as 'consumed' on the main summary page
+    $summaryFile = Join-Path $env:PIPELINE_WORKSPACE ("Source_Artifacts_Summary.md" -f (New-Guid).Guid)
+    $summaryMd = "### Deployed Artifacts from [Build {0}]({1})" -f $env:ARTIFACTS_BUILD_NUM, $sourceBuildUri
+    Set-Content -Path $summaryFile -Value $summaryMd
+    Write-Host ("##vso[task.uploadsummary]{0}" -f $summaryFile)
+  displayName: Write Source Artifacts Summary
+  env:
+    ARTIFACTS_BUILD_NUM: $(download_build_artifacts.BuildNumber)
