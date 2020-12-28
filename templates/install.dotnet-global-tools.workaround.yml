@@ -16,3 +16,10 @@ steps:
     packageType: sdk
     version: ${{ parameters.netSdkVersion }}
     installationPath: $(Agent.ToolsDirectory)/dotnet
+
+- task: UseDotNet@2
+  displayName: 'Install .NET Core SDK 5.x (Global Tools error workaround)'
+  inputs:
+    packageType: sdk
+    version: 5.x
+    installationPath: $(Agent.ToolsDirectory)/dotnet
