@@ -64,6 +64,12 @@ jobs:
 
   # Executes the 'InvokeBuild' build script
   - pwsh: |
+      if (!(Get-PSRepository PSGallery)) {
+        Register-PSRepository -Name "PSGallery" `
+                              –SourceLocation "https://www.powershellgallery.com/api/v2/" `
+                              -InstallationPolicy Trusted `
+                              -Force
+      }
       if (!(Get-Module -ListAvailable InvokeBuild)) {
         Install-Module InvokeBuild -Repository PSGalley -Force
       }
@@ -77,6 +83,7 @@ jobs:
                    -TestReportTypes "HtmlInline_AzurePipelines;Cobertura" `
                    -PackagesDir "$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)"
     workingDirectory: $(Build.SourcesDirectory)
+    displayName: Run InvokeBuild script
 
   - ${{ parameters.preBuild }}
 
