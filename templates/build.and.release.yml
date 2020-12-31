@@ -71,7 +71,7 @@ jobs:
                               -Force
       }
       if (!(Get-Module -ListAvailable InvokeBuild)) {
-        Install-Module InvokeBuild -Repository PSGalley -Force
+        Install-Module InvokeBuild -Repository PSGallery -Force
       }
       Import-Module InvokeBuild
       Invoke-Build "${{ parameters.build_script }}" `
