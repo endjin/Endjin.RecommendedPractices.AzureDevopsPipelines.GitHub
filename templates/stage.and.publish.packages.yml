@@ -1,0 +1,124 @@
+parameters:
+  gitversion_semver: ''
+  gitversion_prerelease_tag: ''
+  endjin_repository_name: ''
+  preCopyNugetPackages: []
+  postCopyNugetPackages: []
+  prePublishReleaseArtifacts: []
+  postPublishReleaseArtifacts: []
+  preCreateGitHubRelease: []
+  postCreateGitHubRelease: []
+  prePublishNugetPackages: []
+  postPublishNugetPackages: []
+  service_connection_github: ''
+  service_connection_nuget_org: ''
+
+  # We have dependencies on the following Build Variables:
+  # Endjin.ForcePublish
+  # Endjin_Slack_ReleasesWebhookUri
+steps:
+
+# Determine required pre-release/publish behaviour
+- powershell: |
+    Write-Host ("ENVIRONMENT VARIABLES DEBUG:`n{0}" -f (gci env:\GITVERSION*))
+
+    $isPreRelease = -not ([string]::IsNullOrEmpty($Env:GITVERSION_PRERELEASETAG)
+    Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$isPreRelease"
+
+    $publishFlag = $env:Endjin.ForcePublish -or !($isPreRelease)
+    Write-Host "##vso[task.setvariable variable=Endjin_PublishFlag]$publishFlag"
+  displayName: 'Set Environment Variables'
+
+- ${{ parameters.preCopyNugetPackages }}
+
+- task: CopyFiles@2
+  displayName: 'Copy Nuget Packages To Release Folder'
+  inputs:
+    SourceFolder: '$(Build.ArtifactStagingDirectory)'
+    Contents: |
+      Packages/**/*.nupkg
+      Packages/**/*.snupkg
+    TargetFolder: '$(Build.ArtifactStagingDirectory)/Release/NuGet'
+
+- ${{ parameters.postCopyNugetPackages }}
+- ${{ parameters.prePublishReleaseArtifacts }}
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Release Artifacts'
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)/Release'
+
+- ${{ parameters.postPublishReleaseArtifacts }}
+
+- task: NuGetToolInstaller@0
+  inputs:
+    versionSpec: '5.1.0'
+
+- ${{ parameters.preCreateGitHubRelease }}
+
+- task: GithubRelease@0 
+  displayName: 'Create GitHub Release'      
+  condition: and(succeeded(), variables['Endjin_PublishFlag'])
+  inputs:
+    gitHubConnection: ${{ parameters.service_connection_github }}
+    repositoryName: ${{ parameters.endjin_repository_name }}
+    tagSource: manual
+    tag: ${{ parameters.gitversion_semver }}
+    isPreRelease: $(Endjin_IsPreRelease)
+    assets: |
+        $(Build.ArtifactStagingDirectory)/Release/**
+
+- ${{ parameters.postCreateGitHubRelease }}
+
+- ${{ parameters.prePublishNugetPackages }}
+
+- task: NuGetCommand@2
+  displayName: 'Publish to nuget.org'
+  condition: and(succeeded(), variables['Endjin_PublishFlag'])
+  inputs:
+    command: push
+    nuGetFeedType: external
+    publishFeedCredentials: ${{ parameters.service_connection_nuget_org }}
+    versioningScheme: byBuildNumber
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/Release/**/*.nupkg'
+
+- ${{ parameters.postPublishNugetPackages }}
+
+- pwsh: |
+    $body = @{
+      username = "endjin-bot"
+      icon_emoji = ":mike:"
+    }
+
+    Write-Host "Build_ArtifactStagingDirectory: $($env:Build_ArtifactStagingDirectory)"
+    $packages = gci -Recurse -Filter *.nupkg -Path "$($env:Build_ArtifactStagingDirectory)/Release/NuGet/Packages"
+    Write-Host $packages
+
+    $blocks = @()
+    $blocks += @{ type = "header"; text = @{ type = "plain_text";  text = "New release for $($env:Endjin_Repository_Name) : $($env:GitVersion_SemVer)" } }
+    $blocks += @{ type = "section"; text = @{ type = "mrkdwn";  text = "The following packages have been published to <https://nuget.org|NuGet>:" } }
+
+    $packagesText = ""
+
+    foreach ($p in $packages) {
+        $packageName = [IO.Path]::GetFileNameWithoutExtension($p.Name) -replace ".$($env:GitVersion_SemVer)",""
+        $packagesText += "•  <https://nuget.org/packages/$packageName/$($env:GitVersion_SemVer)|$packageName>`n"
+    }
+
+    $blocks += @{ type = "section"; text = @{ type = "mrkdwn";  text = $packagesText } }
+    $blocks += @{ type = "divider" }
+    $blocks += @{ type = "section"; text = @{ type = "mrkdwn";  text = "The GitHub release can be found <https://github.com/$($env:Endjin_Repository_Name)/releases/tag/$($env:GitVersion_SemVer)|here>" } }
+
+    $body += @{ blocks = $blocks }
+    Write-Host "body:`n$(ConvertTo-Json $body -Depth 99)"
+    Invoke-RestMethod -uri "$($env:Endjin_Slack_ReleasesWebhookUri)" `
+                      -Method Post `
+                      -body (ConvertTo-Json $body -Depth 99) `
+                      -ContentType 'application/json'
+  condition: and(succeeded(), variables['Endjin_PublishFlag']), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
+  displayName: Send notification to Slack channel
+  env:
+    Endjin_Slack_ReleasesWebhookUri: $(Endjin_Slack_ReleasesWebhookUri)
+    Endjin_Repository_Name: ${{ parameters.endjin_repository_name }}
+    GitVersion_SemVer: ${{ parameters.gitversion_semver }}
+    Build_ArtifactStagingDirectory: $(Build.ArtifactStagingDirectory)
