@@ -1,10 +1,9 @@
 parameters:
-- name: gitversion_semver
-  type: string
-- name: gitversion_isprerelease
-  type: boolean
-  
-  endjin_repository_name: ''
+  gitversion_semver:
+  gitversion_isprerelease:
+  endjin_repository_name:
+  service_connection_github:
+  service_connection_nuget_org:
   preCopyNugetPackages: []
   postCopyNugetPackages: []
   prePublishReleaseArtifacts: []
@@ -13,8 +12,6 @@ parameters:
   postCreateGitHubRelease: []
   prePublishNugetPackages: []
   postPublishNugetPackages: []
-  service_connection_github: ''
-  service_connection_nuget_org: ''
 
   # We have dependencies on the following Build Variables:
   # Endjin.ForcePublish
