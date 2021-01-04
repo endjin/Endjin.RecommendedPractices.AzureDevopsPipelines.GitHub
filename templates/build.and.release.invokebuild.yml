@@ -1,0 +1,103 @@
+parameters:
+  preCustomEnvironmentVariables: []
+  postCustomEnvironmentVariables: []
+  preBuild: []
+  postBuild: []
+  preCopyNugetPackages: []
+  postCopyNugetPackages: []
+  prePublishReleaseArtifacts: []
+  postPublishReleaseArtifacts: []
+  preCreateGitHubRelease: []
+  postCreateGitHubRelease: []
+  prePublishNugetPackages: []
+  postPublishNugetPackages: []
+  vmImage: ''
+  service_connection_nuget_org: '' 
+  service_connection_github: '' 
+  build_script: ''
+  build_task: '.'
+  netSdkVersion: '3.x'
+
+jobs:
+- job: Build
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+
+  variables:
+    BuildConfiguration: 'Release'
+    DOTNET_CLI_TELEMETRY_OPTOUT: 1
+    DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+
+    # We have dependencies on the following Environment Variables:
+    # BUILD_REPOSITORY_NAME
+
+    # We have dependencies on the following Build Variables:
+    # Endjin_Service_Connection_NuGet_Org
+    # Endjin_Service_Connection_GitHub
+    # Endjin.ForcePublish
+    # Endjin_Slack_ReleasesWebhookUri
+  steps:
+  - template: install.dotnet-global-tools.workaround.yml
+    parameters:
+      netSdkVersion: ${{ parameters.netSdkVersion }}
+
+  - ${{ parameters.preCustomEnvironmentVariables }}
+
+  - powershell: |
+      Write-Host "##vso[task.setvariable variable=Endjin_Repository_Name]$Env:BUILD_REPOSITORY_NAME"
+    displayName: 'Set Environment Variables'
+
+  - powershell: |
+      Write-Host "Initializing $(Build.ArtifactStagingDirectory)/Release"
+      New-Item -Path $(Build.ArtifactStagingDirectory) -Name "Release" -ItemType "directory"
+    displayName: 'Initialize Artifact Staging Release Directory'
+
+  - ${{ parameters.postCustomEnvironmentVariables }}
+
+  # Useful for debugging purposes
+  - powershell: 'gci Env:'
+    condition: or(variables['Endjin.BuildDiagnostics'], variables['Endjin.ShowEnvironment'])
+    displayName: 'Print Environment Variables'
+
+  - ${{ parameters.preBuild }}
+
+  # Executes the 'InvokeBuild' build script
+  - pwsh: |
+      if (!(Get-PSRepository PSGallery)) {
+        Register-PSRepository -Name "PSGallery" `
+                              –SourceLocation "https://www.powershellgallery.com/api/v2/" `
+                              -InstallationPolicy Trusted `
+                              -Force
+      }
+      if (!(Get-Module -ListAvailable InvokeBuild)) {
+        Install-Module InvokeBuild -MaximumVersion 5.999.999 -Repository PSGallery -Force
+      }
+      Import-Module InvokeBuild
+      Invoke-Build "${{ parameters.build_script }}" `
+                   -Task "${{ parameters.build_task }}" `
+                   -Configuration "$(BuildConfiguration)" `
+                   -BuildRepositoryUri "$(Build.Repository.Uri)" `
+                   -SourcesDir "$(Build.SourcesDirectory)" `
+                   -CoverageDir "$(Build.SourcesDirectory)/CodeCoverage" `
+                   -TestReportTypes "HtmlInline_AzurePipelines;Cobertura" `
+                   -PackagesDir "$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)"
+    workingDirectory: $(Build.SourcesDirectory)
+    displayName: Run InvokeBuild script
+
+  - ${{ parameters.postBuild }}
+
+  - template: stage.and.publish.packages.yml
+    parameters:
+      gitversion_semver: $(GitVersion.SemVer)
+      gitversion_isprerelease: $[ ne(variables['GitVersion.PreReleaseTag'], '') ]
+      endjin_repository_name: $(Endjin_Repository_Name)
+      preCopyNugetPackages: ${{ parameters.preCopyNugetPackages }}
+      postCopyNugetPackages: ${{ parameters.postCopyNugetPackages }}
+      prePublishReleaseArtifacts: ${{ parameters.prePublishReleaseArtifacts }}
+      postPublishReleaseArtifacts: ${{ parameters.postPublishReleaseArtifacts }}
+      preCreateGitHubRelease: ${{ parameters.preCreateGitHubRelease }}
+      postCreateGitHubRelease: ${{ parameters.postCreateGitHubRelease }}
+      prePublishNugetPackages: ${{ parameters.prePublishNugetPackages }}
+      postPublishNugetPackages: ${{ parameters.postPublishNugetPackages }}
+      service_connection_nuget_org: ${{ parameters.service_connection_nuget_org }}
+      service_connection_github: ${{ parameters.service_connection_github }}
