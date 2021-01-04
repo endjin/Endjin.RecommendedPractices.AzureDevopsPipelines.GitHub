@@ -115,7 +115,7 @@ steps:
                       -Method Post `
                       -body (ConvertTo-Json $body -Depth 99) `
                       -ContentType 'application/json'
-  condition: and(succeeded(), variables['Endjin_PublishFlag']), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
+  condition: and(succeeded(), variables['Endjin_PublishFlag'], ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
   displayName: Send notification to Slack channel
   env:
     Endjin_Slack_ReleasesWebhookUri: $(Endjin_Slack_ReleasesWebhookUri)
