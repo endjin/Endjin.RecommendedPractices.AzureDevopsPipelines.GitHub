@@ -90,6 +90,7 @@ jobs:
     parameters:
       gitversion_semver: $(GitVersion.SemVer)
       gitversion_prerelease_tag: $(GitVersion.PreReleaseTag)
+      endjin_repository_name: $(Endjin_Repository_Name)
       preCopyNugetPackages: ${{ parameters.preCopyNugetPackages }}
       postCopyNugetPackages: ${{ parameters.postCopyNugetPackages }}
       prePublishReleaseArtifacts: ${{ parameters.prePublishReleaseArtifacts }}
