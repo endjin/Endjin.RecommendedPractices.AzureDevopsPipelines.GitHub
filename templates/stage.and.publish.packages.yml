@@ -22,7 +22,7 @@ steps:
 - powershell: |
     Write-Host ("ENVIRONMENT VARIABLES DEBUG:`n{0}" -f (gci env:\GITVERSION*))
 
-    $isPreRelease = -not ([string]::IsNullOrEmpty($Env:GITVERSION_PRERELEASETAG)
+    $isPreRelease = -not ([string]::IsNullOrEmpty($Env:GITVERSION_PRERELEASETAG))
     Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$isPreRelease"
 
     $publishFlag = $env:Endjin.ForcePublish -or !($isPreRelease)
