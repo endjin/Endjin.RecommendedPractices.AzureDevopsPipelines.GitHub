@@ -58,6 +58,11 @@ steps:
 
 - ${{ parameters.preCreateGitHubRelease }}
 
+- powershell: |
+    Write-Host "Endjin_IsPreRelease: '$($env:Endjin_IsPreRelease)'"
+    Write-Host "Endjin_PublishFlag: '$($env:Endjin_PublishFlag)'"
+  displayName: 'Output Environment Variables'
+
 - task: GithubRelease@0 
   displayName: 'Create GitHub Release'      
   condition: and(succeeded(), variables['Endjin_PublishFlag'])
