@@ -13,12 +13,15 @@ parameters:
   prePublishNugetPackages: []
   postPublishNugetPackages: []
 
-variables:
-  Endjin_IsPreRelease: ${{ parameters.gitversion_isprerelease }}      # parameters seem not to be accessible in condition expressions
   # We have dependencies on the following Build Variables:
   # Endjin.ForcePublish
   # Endjin_Slack_ReleasesWebhookUri
 steps:
+
+# parameters seem not to be accessible in condition expressions, so we need this as a variable
+- powershell: |
+    Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]${{ parameters.gitversion_isprerelease }}"
+  displayName: 'Set Endjin_IsPreRelease variable'
 
 # Determine required pre-release/publish behaviour
 - powershell: |
