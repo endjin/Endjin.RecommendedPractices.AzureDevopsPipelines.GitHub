@@ -89,7 +89,7 @@ jobs:
   - template: stage.and.publish.packages.yml
     parameters:
       gitversion_semver: $(GitVersion.SemVer)
-      gitversion_prerelease_tag: $(GitVersion.PreReleaseTag)
+      gitversion_isprerelease: $[ ne(variables['GitVersion.PreReleaseTag'], '') ]
       endjin_repository_name: $(Endjin_Repository_Name)
       preCopyNugetPackages: ${{ parameters.preCopyNugetPackages }}
       postCopyNugetPackages: ${{ parameters.postCopyNugetPackages }}

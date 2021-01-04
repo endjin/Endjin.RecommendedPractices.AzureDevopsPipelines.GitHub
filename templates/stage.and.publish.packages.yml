@@ -1,6 +1,9 @@
 parameters:
-  gitversion_semver: ''
-  gitversion_prerelease_tag: ''
+- name: gitversion_semver
+  type: string
+- name: gitversion_isprerelease
+  type: boolean
+  
   endjin_repository_name: ''
   preCopyNugetPackages: []
   postCopyNugetPackages: []
@@ -20,16 +23,11 @@ steps:
 
 # Determine required pre-release/publish behaviour
 - powershell: |
-    Write-Host ("GitVersion Variables:`n{0}" -f (gci env:\GITVERSION* | ft | Out-String))
-
-    $isPreRelease = -not ([string]::IsNullOrEmpty($Env:GITVERSION_PRERELEASETAG))
-    Write-Host "Endjin_IsPreRelease: '$isPreRelease'"
-    Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$isPreRelease"
-
-    $publishFlag = $env:Endjin.ForcePublish -or !($isPreRelease)
-    Write-Host "Endjin_PublishFlag: '$publishFlag'"
-    Write-Host "##vso[task.setvariable variable=Endjin_PublishFlag]$publishFlag"
-  displayName: 'Set Environment Variables'
+    Write-Host "gitversion_semver:       '${{ parameters.gitversion_semver }}'"
+    Write-Host "gitversion_isprerelease: '${{ parameters.gitversion_isprerelease }}'"
+    Write-Host "endjin_repository_name:  '${{ parameters.endjin_repository_name }}'"
+  condition: or(variables['Endjin.BuildDiagnostics'], variables['Endjin.ShowEnvironment'])
+  displayName: 'Debug parameter values'
 
 - ${{ parameters.preCopyNugetPackages }}
 
@@ -58,20 +56,15 @@ steps:
 
 - ${{ parameters.preCreateGitHubRelease }}
 
-- powershell: |
-    Write-Host "Endjin_IsPreRelease: '$(Endjin_IsPreRelease)'"
-    Write-Host "Endjin_PublishFlag: '$(Endjin_PublishFlag)'"
-  displayName: 'Output Environment Variables'
-
 - task: GithubRelease@0 
   displayName: 'Create GitHub Release'      
-  condition: and(succeeded(), variables['Endjin_PublishFlag'])
+  condition: and(succeeded(), or(variables['Endjin.ForcePublish'], not(parameters['gitversion_isprerelease'])))
   inputs:
     gitHubConnection: ${{ parameters.service_connection_github }}
     repositoryName: ${{ parameters.endjin_repository_name }}
     tagSource: manual
     tag: ${{ parameters.gitversion_semver }}
-    isPreRelease: $(Endjin_IsPreRelease)
+    isPreRelease: ${{ parameters.gitversion_isprerelease }}
     assets: |
         $(Build.ArtifactStagingDirectory)/Release/**
 
@@ -81,7 +74,7 @@ steps:
 
 - task: NuGetCommand@2
   displayName: 'Publish to nuget.org'
-  condition: and(succeeded(), variables['Endjin_PublishFlag'])
+  condition: and(succeeded(), or(variables['Endjin.ForcePublish'], not(parameters['gitversion_isprerelease'])))
   inputs:
     command: push
     nuGetFeedType: external
@@ -122,7 +115,7 @@ steps:
                       -Method Post `
                       -body (ConvertTo-Json $body -Depth 99) `
                       -ContentType 'application/json'
-  condition: and(succeeded(), variables['Endjin_PublishFlag'], ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
+  condition: and(succeeded(), or(variables['Endjin.ForcePublish'], not(parameters['gitversion_isprerelease'])), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
   displayName: Send notification to Slack channel
   env:
     Endjin_Slack_ReleasesWebhookUri: $(Endjin_Slack_ReleasesWebhookUri)
