@@ -20,7 +20,7 @@ steps:
 
 # Determine required pre-release/publish behaviour
 - powershell: |
-    Write-Host ("ENVIRONMENT VARIABLES DEBUG:`n{0}" -f ((gci env:\GITVERSION*).Name|Out-String))
+    Write-Host ("GitVersion Variables:`n{0}" -f (gci env:\GITVERSION* | ft | Out-String))
 
     $isPreRelease = -not ([string]::IsNullOrEmpty($Env:GITVERSION_PRERELEASETAG))
     Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$isPreRelease"
