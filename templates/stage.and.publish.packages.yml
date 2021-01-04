@@ -23,9 +23,11 @@ steps:
     Write-Host ("GitVersion Variables:`n{0}" -f (gci env:\GITVERSION* | ft | Out-String))
 
     $isPreRelease = -not ([string]::IsNullOrEmpty($Env:GITVERSION_PRERELEASETAG))
+    Write-Host "Endjin_IsPreRelease: '$isPreRelease'"
     Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$isPreRelease"
 
     $publishFlag = $env:Endjin.ForcePublish -or !($isPreRelease)
+    Write-Host "Endjin_PublishFlag: '$publishFlag'"
     Write-Host "##vso[task.setvariable variable=Endjin_PublishFlag]$publishFlag"
   displayName: 'Set Environment Variables'
 
