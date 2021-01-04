@@ -13,6 +13,8 @@ parameters:
   prePublishNugetPackages: []
   postPublishNugetPackages: []
 
+variables:
+  Endjin_IsPreRelease: ${{ parameters.gitversion_isprerelease }}      # parameters seem not to be accessible in condition expressions
   # We have dependencies on the following Build Variables:
   # Endjin.ForcePublish
   # Endjin_Slack_ReleasesWebhookUri
@@ -23,6 +25,7 @@ steps:
     Write-Host "gitversion_semver:       '${{ parameters.gitversion_semver }}'"
     Write-Host "gitversion_isprerelease: '${{ parameters.gitversion_isprerelease }}'"
     Write-Host "endjin_repository_name:  '${{ parameters.endjin_repository_name }}'"
+    Write-Host "Endjin_IsPreRelease:     '$(Endjin_IsPreRelease)'"
   condition: or(variables['Endjin.BuildDiagnostics'], variables['Endjin.ShowEnvironment'])
   displayName: 'Debug parameter values'
 
@@ -55,13 +58,13 @@ steps:
 
 - task: GithubRelease@0 
   displayName: 'Create GitHub Release'      
-  condition: and(succeeded(), or(variables['Endjin.ForcePublish'], not(parameters['gitversion_isprerelease'])))
+  condition: and(succeeded(), or(variables['Endjin.ForcePublish'], not(variables['Endjin_IsPreRelease'])))
   inputs:
     gitHubConnection: ${{ parameters.service_connection_github }}
     repositoryName: ${{ parameters.endjin_repository_name }}
     tagSource: manual
     tag: ${{ parameters.gitversion_semver }}
-    isPreRelease: ${{ parameters.gitversion_isprerelease }}
+    isPreRelease: $(Endjin_IsPreRelease)
     assets: |
         $(Build.ArtifactStagingDirectory)/Release/**
 
@@ -71,7 +74,7 @@ steps:
 
 - task: NuGetCommand@2
   displayName: 'Publish to nuget.org'
-  condition: and(succeeded(), or(variables['Endjin.ForcePublish'], not(parameters['gitversion_isprerelease'])))
+  condition: and(succeeded(), or(variables['Endjin.ForcePublish'], not(variables['Endjin_IsPreRelease'])))
   inputs:
     command: push
     nuGetFeedType: external
@@ -112,7 +115,7 @@ steps:
                       -Method Post `
                       -body (ConvertTo-Json $body -Depth 99) `
                       -ContentType 'application/json'
-  condition: and(succeeded(), or(variables['Endjin.ForcePublish'], not(parameters['gitversion_isprerelease'])), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
+  condition: and(succeeded(), or(variables['Endjin.ForcePublish'], not(variables['Endjin_IsPreRelease'])), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
   displayName: Send notification to Slack channel
   env:
     Endjin_Slack_ReleasesWebhookUri: $(Endjin_Slack_ReleasesWebhookUri)
