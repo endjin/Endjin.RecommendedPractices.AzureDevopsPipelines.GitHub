@@ -5,6 +5,7 @@ steps:
 
 - task: UseDotNet@2
   displayName: 'Install .NET Core SDK 2.x (Global Tools error workaround)'
+  condition: startsWith('${{ parameters.netSdkVersion }}', '2')
   inputs:
     packageType: sdk
     version: 2.x
@@ -12,6 +13,7 @@ steps:
 
 - task: UseDotNet@2
   displayName: 'Install .NET Core SDK 3.x (Global Tools error workaround)'
+  condition: startsWith('${{ parameters.netSdkVersion }}', '3')
   inputs:
     packageType: sdk
     version: ${{ parameters.netSdkVersion }}
@@ -19,6 +21,7 @@ steps:
 
 - task: UseDotNet@2
   displayName: 'Install .NET Core SDK 5.x (Global Tools error workaround)'
+  condition: startsWith('${{ parameters.netSdkVersion }}', '5')
   inputs:
     packageType: sdk
     version: 5.x
