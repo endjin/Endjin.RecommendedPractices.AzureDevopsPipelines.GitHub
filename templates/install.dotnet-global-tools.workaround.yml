@@ -23,3 +23,13 @@ steps:
     packageType: sdk
     version: 5.x
     installationPath: $(Agent.ToolsDirectory)/dotnet
+
+# Apparently if the first thing you attempt to do with nuget on a build agent is to
+# install a global tool, then as of .NET SDK 5.0.202, it fails, because for some
+# reason it only looks in the local cache. (Running the NuGet installer task doesn't
+# help by the way.) But apparently, just asking nuget to list its sources seems to
+# have some lasting global side effect that means that when we subsequently run
+# `dotnet install` it works.
+- powershell: |
+      nuget sources
+    displayName: 'Initialize NuGet to enable tool installation'
