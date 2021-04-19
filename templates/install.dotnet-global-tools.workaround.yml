@@ -31,5 +31,5 @@ steps:
 # have some lasting global side effect that means that when we subsequently run
 # `dotnet install` it works.
 - powershell: |
-    nuget sources
+    nuget sources -Format detailed
   displayName: 'Initialize NuGet to enable tool installation'
