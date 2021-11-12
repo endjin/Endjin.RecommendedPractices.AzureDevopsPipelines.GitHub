@@ -64,7 +64,7 @@ jobs:
     displayName: 'Install .NET Core 3.1 runtime (required by GitVersion)'
     inputs:
       packageType: runtime
-      version: 3.1
+      version: 3.1.x
 
   # - template: install-and-run-gitversion.yml
 
