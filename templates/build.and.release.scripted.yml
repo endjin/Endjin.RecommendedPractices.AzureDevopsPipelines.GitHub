@@ -51,11 +51,20 @@ jobs:
   #   parameters:
   #     netSdkVersion: ${{ parameters.netSdkVersion }}
   - task: UseDotNet@2
-    displayName: 'Install .NET Core SDK ${{ parameters.netSdkVersion }}'
+    displayName: 'Install .NET SDK ${{ parameters.netSdkVersion }}'
     inputs:
       packageType: sdk
       version: ${{ parameters.netSdkVersion }}
       installationPath: $(Agent.ToolsDirectory)/dotnet
+
+  # At some point presumably a version of GitVersion will come out that doesn't
+  # need this. Once Endjin.RecommendedPractices.Build upgrades to a suitable
+  # version we can move to that.
+  - task: UseDotNet@2
+    displayName: 'Install .NET Core 3.1 runtime (required by GitVersion)'
+    inputs:
+      packageType: runtime
+      version: 3.1
 
   # - template: install-and-run-gitversion.yml
 
