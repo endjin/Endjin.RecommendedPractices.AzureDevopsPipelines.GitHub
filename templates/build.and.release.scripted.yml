@@ -79,8 +79,10 @@ jobs:
     displayName: 'Print Environment Variables'
 
   - task: PowerShell@2
-    filePath: "$(Build.SourcesDirectory)/build.ps1"
-    pwsh: true
+    inputs:
+      targetType: 'filePath'
+      filePath: "$(Build.SourcesDirectory)/build.ps1"
+      pwsh: true
     displayName: 'Run build.ps1'
 
   # - ${{ parameters.preBuild }}
