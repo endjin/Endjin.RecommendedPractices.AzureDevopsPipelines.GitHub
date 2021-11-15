@@ -57,14 +57,14 @@ jobs:
       version: ${{ parameters.netSdkVersion }}
       installationPath: $(Agent.ToolsDirectory)/dotnet
 
-  # At some point presumably a version of GitVersion will come out that doesn't
-  # need this. Once Endjin.RecommendedPractices.Build upgrades to a suitable
-  # version we can move to that.
-  - task: UseDotNet@2
-    displayName: 'Install .NET Core 3.1 runtime (required by GitVersion)'
-    inputs:
-      packageType: runtime
-      version: 3.1.x
+  # # At some point presumably a version of GitVersion will come out that doesn't
+  # # need this. Once Endjin.RecommendedPractices.Build upgrades to a suitable
+  # # version we can move to that.
+  # - task: UseDotNet@2
+  #   displayName: 'Install .NET Core 3.1 runtime (required by GitVersion)'
+  #   inputs:
+  #     packageType: runtime
+  #     version: 3.1.x
 
   # - template: install-and-run-gitversion.yml
 
@@ -215,7 +215,11 @@ jobs:
       gitHubConnection: ${{ parameters.service_connection_github }}
       repositoryName: $(Endjin_Repository_Name)
       tagSource: manual
-      tag: $(GitVersion.SemVer) 
+      # Due to this bug:
+      # https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
+      # GitVersion variables currently don't have the GitVersion. prefix.
+      #tag: $(GitVersion.SemVer)
+      tag: $(SemVer)
       isPreRelease: $(Endjin_IsPreRelease)
       assets: |
           $(Build.ArtifactStagingDirectory)/Release/**
@@ -271,11 +275,19 @@ jobs:
                         -Method Post `
                         -body (ConvertTo-Json $body -Depth 99) `
                         -ContentType 'application/json'
-    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['GitVersion.PreReleaseTag'], '')), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
+    # Due to this bug:
+    # https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
+    # GitVersion variables currently don't have the GitVersion. prefix.
+    #condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['GitVersion.PreReleaseTag'], '')), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
+    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['PreReleaseTag'], '')), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
     displayName: Send notification to Slack channel
     env:
       Endjin_Slack_ReleasesWebhookUri: $(Endjin_Slack_ReleasesWebhookUri)
       Endjin_Repository_Name: $(Endjin_Repository_Name)
-      GitVersion_SemVer: $(GitVersion.SemVer)
+      # Due to this bug:
+      # https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
+      # GitVersion variables currently don't have the GitVersion. prefix.
+      #GitVersion_SemVer: $(GitVersion.SemVer)
+      GitVersion_SemVer: $(SemVer)
       Build_ArtifactStagingDirectory: $(Build.ArtifactStagingDirectory)
       
