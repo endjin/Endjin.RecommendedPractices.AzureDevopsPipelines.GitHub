@@ -205,8 +205,12 @@ jobs:
   - ${{ parameters.preCreateGitHubRelease }}
 
   - task: GithubRelease@0 
-    displayName: 'Create GitHub Release'      
-    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['GitVersion.PreReleaseTag'], '')))
+    displayName: 'Create GitHub Release'
+    # Due to this bug:
+    # https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
+    # GitVersion variables currently don't have the GitVersion. prefix.
+    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['PreReleaseTag'], '')))
+    #condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['GitVersion.PreReleaseTag'], '')))
     inputs:
       gitHubConnection: ${{ parameters.service_connection_github }}
       repositoryName: $(Endjin_Repository_Name)
