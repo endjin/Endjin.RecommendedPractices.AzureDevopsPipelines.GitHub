@@ -226,7 +226,11 @@ jobs:
 
   - task: NuGetCommand@2
     displayName: 'Publish to nuget.org'
-    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['GitVersion.PreReleaseTag'], '')))
+    # Due to this bug:
+    # https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
+    # GitVersion variables currently don't have the GitVersion. prefix.
+    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['PreReleaseTag'], '')))
+    #condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['GitVersion.PreReleaseTag'], '')))
     inputs:
       command: push
       nuGetFeedType: external
