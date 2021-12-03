@@ -1,18 +1,19 @@
+# This template is designed for builds using the Endjin.RecommendedPractices.Build module:
+#   https://www.powershellgallery.com/packages/Endjin.RecommendedPractices.Build
+#   https://github.com/endjin/Endjin.RecommendedPractices.Build
+# The majority of the build process is executed by a `build.ps1` script in the root of the
+# project.
+#
+# With scripted builds, many of the extensibility points exposed by `build.and.release.yml`
+# (e.g. `preBuild`, `postBuild`, `preRunExecutableSpecs`, etc.) are now supplied by the
+# build script, and not this Azure DevOps template.
+# However, there are still some extensibility points specific to the Azure DevOps pipeline
+# execution.
 parameters:
   preCustomEnvironmentVariables: []
   postCustomEnvironmentVariables: []
-  # preBuild: []
-  # postBuild: []
-  # preRunExecutableSpecs: []
-  # postRunExecutableSpecs: []
-  # preSpecsReport: []
-  # postSpecsReport: []
   prePublishCodeCoverageReport: []
   postPublishCodeCoverageReport: []
-  # postSpecs: []
-  # preCreateNuGetPackages: []
-  # postCreateNuGetPackages: []
-  # postPack: []
   preCopyNugetPackages: []
   postCopyNugetPackages: []
   prePublishReleaseArtifacts: []
@@ -22,9 +23,8 @@ parameters:
   prePublishNugetPackages: []
   postPublishNugetPackages: []
   vmImage: ''
-  service_connection_nuget_org: '' 
-  service_connection_github: '' 
-  solution_to_build: ''
+  service_connection_nuget_org: ''
+  service_connection_github: ''
   netSdkVersion: '6.x'
 
 jobs:
@@ -36,20 +36,16 @@ jobs:
     BuildConfiguration: 'Release'
     DOTNET_CLI_TELEMETRY_OPTOUT: 1
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
-    SolutionToBuild: ${{ parameters.solution_to_build }}
 
     # We have dependencies on the following Environment Variables:
-    # GITVERSION_PRERELEASETAG
     # BUILD_REPOSITORY_NAME
 
     # We have dependencies on the following Build Variables:
     # Endjin_Service_Connection_NuGet_Org
     # Endjin_Service_Connection_GitHub
+    # Endjin_Slack_ReleasesWebhookUri
     # Endjin.ForcePublish
   steps:
-  # - template: install.dotnet-global-tools.workaround.yml
-  #   parameters:
-  #     netSdkVersion: ${{ parameters.netSdkVersion }}
   - task: UseDotNet@2
     displayName: 'Install .NET SDK ${{ parameters.netSdkVersion }}'
     inputs:
@@ -57,21 +53,9 @@ jobs:
       version: ${{ parameters.netSdkVersion }}
       installationPath: $(Agent.ToolsDirectory)/dotnet
 
-  # # At some point presumably a version of GitVersion will come out that doesn't
-  # # need this. Once Endjin.RecommendedPractices.Build upgrades to a suitable
-  # # version we can move to that.
-  # - task: UseDotNet@2
-  #   displayName: 'Install .NET Core 3.1 runtime (required by GitVersion)'
-  #   inputs:
-  #     packageType: runtime
-  #     version: 3.1.x
-
-  # - template: install-and-run-gitversion.yml
-
   - ${{ parameters.preCustomEnvironmentVariables }}
 
   - powershell: |
-      Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$((-not ([string]::IsNullOrEmpty($Env:GITVERSION_PRERELEASETAG))))"
       Write-Host "##vso[task.setvariable variable=Endjin_Repository_Name]$Env:BUILD_REPOSITORY_NAME"
     displayName: 'Set Environment Variables'
 
@@ -94,40 +78,28 @@ jobs:
       pwsh: true
     displayName: 'Run build.ps1'
 
-  # - ${{ parameters.preBuild }}
+  # In non-scripted builds, we run this step much earlier in the process - we can do it immediately
+  # after running GitVersion. But with scripted builds, GitVersion is run by `build.ps` so we can't
+  # use any of its outputs until after the scripted build runs.
+  # Scripted build 0.1.0 sets all the GitVersion outputs into environment variables with a
+  # GITVERSION_ prefix, but currently, due to this bug:
+  #  https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
+  # when it emits them as Build Variables, it does not include the prefix. Environment variable
+  # set by the build script are only available while the build script runs, so it's the build
+  # variables we have to depend on here.
+  # We're giving them an Endjin_ prefix here so we've got a stable name to refer to them by
+  # elsewhere in the script, so that if the scripted build is updated to reinstate the GITVERSION_
+  # prefix for these build variables, we only have to change them in one place.
+  - powershell: |
+      Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$((-not ([string]::IsNullOrEmpty($PreReleaseTag))))"
+      Write-Host "##vso[task.setvariable variable=Endjin_PreReleaseTag]$($PreReleaseTag))"
+      Write-Host "##vso[task.setvariable variable=Endjin_SemVer]$($SemVer))"
+    displayName: 'Set Version Information Environment Variables'
 
-  # - task: DotNetCoreCLI@2
-  #   displayName: 'Restore & Build'
-  #   inputs:
-  #     command: 'build'
-  #     projects: $(SolutionToBuild)
-  #     arguments: '--configuration $(BuildConfiguration) /p:Version=$(GitVersion.SemVer)'
-  #     versioningScheme: byBuildNumber
-  #     buildProperties: 'EndjinRepositoryUrl="$(Build.Repository.Uri)"'
-
-  # - ${{ parameters.postBuild }}
-  
-  # - ${{ parameters.preRunExecutableSpecs }}
-
-  # # The 'test' command was not honouring the 'nobuild' setting, so now we pass is via the
-  # # 'arguments' parameter which it does support. 
-  # - task: DotNetCoreCLI@2
-  #   displayName: 'Run Executable Specifications'
-  #   inputs:
-  #     command: 'test'
-  #     projects: $(SolutionToBuild)
-  #     arguments: '-c $(BuildConfiguration) --no-build --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura'
-  
-  # - ${{ parameters.postRunExecutableSpecs }}
-
-  # - ${{ parameters.preSpecsReport }}
-
-  # - script: |
-  #     dotnet tool install -g dotnet-reportgenerator-globaltool
-  #     reportgenerator "-reports:$(Build.SourcesDirectory)/**/**/coverage.cobertura.xml" "-targetdir:$(Build.SourcesDirectory)/CodeCoverage" "-reporttypes:HtmlInline_AzurePipelines;Cobertura"
-  #   displayName: 'Generate Code Coverage Report'
-
-  # - ${{ parameters.postSpecsReport }}
+    # Useful for debugging purposes
+  - powershell: 'gci Env:'
+    condition: or(variables['Endjin.BuildDiagnostics'], variables['Endjin.ShowEnvironment'])
+    displayName: 'Print Post-build Environment Variables'
 
   - ${{ parameters.prePublishCodeCoverageReport }}
 
@@ -140,48 +112,11 @@ jobs:
 
   - ${{ parameters.postPublishCodeCoverageReport }}
 
-  # - ${{ parameters.postSpecs }}
-
-  # - ${{ parameters.preCreateNuGetPackages }}
-
-  # # We switched to using the 'custom' variant as the 'pack' command was not honoring the 'nobuild' setting, and 
-  # # it also does not support the 'arguments' parameter. However, using 'custom' means we have to build the
-  # # command-line ourselves.
-  # - task: DotNetCoreCLI@2
-  #   displayName: 'Create NuGet Packages'
-  #   inputs:
-  #     command: custom
-  #     custom: pack
-  #     projects: $(SolutionToBuild)
-  #     arguments: >
-  #       -c $(BuildConfiguration)
-  #       --no-build
-  #       --no-restore
-  #       --output $(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)
-  #       /p:EndjinRepositoryUrl="$(Build.Repository.Uri)"
-  #       /p:PackageVersion=$(GitVersion.SemVer)
-  #       --verbosity Detailed
-
-  # - ${{ parameters.postCreateNuGetPackages }}
-  
-  # - task: DotNetCoreCLI@2
-  #   displayName: 'Install nupkgversion global tool'
-  #   inputs:
-  #     command: custom
-  #     custom: tool
-  #     arguments: install -g nupkgversion
-
-  # - script: 'nupkgversion "$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)" https://api.nuget.org/v3/index.json'
-  #   displayName: 'Run nupkgversion'
-
-  # - ${{ parameters.postPack }}
-
   - ${{ parameters.preCopyNugetPackages }}
 
   - task: CopyFiles@2
     displayName: 'Copy Nuget Packages To Release Folder'
     inputs:
-      #SourceFolder: '$(Build.ArtifactStagingDirectory)'
       SourceFolder: '$(Build.SourcesDirectory)'
       Contents: |
         _packages/**/*.nupkg
@@ -206,20 +141,12 @@ jobs:
 
   - task: GithubRelease@0 
     displayName: 'Create GitHub Release'
-    # Due to this bug:
-    # https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
-    # GitVersion variables currently don't have the GitVersion. prefix.
-    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['PreReleaseTag'], '')))
-    #condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['GitVersion.PreReleaseTag'], '')))
+    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['Endjin_PreReleaseTag'], '')))
     inputs:
       gitHubConnection: ${{ parameters.service_connection_github }}
       repositoryName: $(Endjin_Repository_Name)
       tagSource: manual
-      # Due to this bug:
-      # https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
-      # GitVersion variables currently don't have the GitVersion. prefix.
-      #tag: $(GitVersion.SemVer)
-      tag: $(SemVer)
+      tag: $(Endjin_SemVer)
       isPreRelease: $(Endjin_IsPreRelease)
       assets: |
           $(Build.ArtifactStagingDirectory)/Release/**
@@ -230,11 +157,7 @@ jobs:
 
   - task: NuGetCommand@2
     displayName: 'Publish to nuget.org'
-    # Due to this bug:
-    # https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
-    # GitVersion variables currently don't have the GitVersion. prefix.
-    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['PreReleaseTag'], '')))
-    #condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['GitVersion.PreReleaseTag'], '')))
+    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['Endjin_PreReleaseTag'], '')))
     inputs:
       command: push
       nuGetFeedType: external
@@ -275,19 +198,11 @@ jobs:
                         -Method Post `
                         -body (ConvertTo-Json $body -Depth 99) `
                         -ContentType 'application/json'
-    # Due to this bug:
-    # https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
-    # GitVersion variables currently don't have the GitVersion. prefix.
-    #condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['GitVersion.PreReleaseTag'], '')), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
-    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['PreReleaseTag'], '')), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
+    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['Endjin_PreReleaseTag'], '')), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
     displayName: Send notification to Slack channel
     env:
       Endjin_Slack_ReleasesWebhookUri: $(Endjin_Slack_ReleasesWebhookUri)
       Endjin_Repository_Name: $(Endjin_Repository_Name)
-      # Due to this bug:
-      # https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
-      # GitVersion variables currently don't have the GitVersion. prefix.
-      #GitVersion_SemVer: $(GitVersion.SemVer)
-      GitVersion_SemVer: $(SemVer)
+      GitVersion_SemVer: $(Endjin_SemVer)
       Build_ArtifactStagingDirectory: $(Build.ArtifactStagingDirectory)
       
