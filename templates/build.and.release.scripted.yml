@@ -98,8 +98,10 @@ jobs:
 
   # Scripted build (V0.1.0) currently doesn't do this for us.
   - powershell: |
-      Write-Host "##vso[build.updatebuildnumber]$($Endjin_SemVer)"
+      Write-Host "##vso[build.updatebuildnumber]$($Env:GitVersion_SemVer)"
     displayName: 'Set Build Number'
+    env:
+      GitVersion_SemVer: $(Endjin_SemVer)
 
   - ${{ parameters.prePublishCodeCoverageReport }}
 
