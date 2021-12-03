@@ -57,14 +57,14 @@ jobs:
 
   - powershell: |
       Write-Host "##vso[task.setvariable variable=Endjin_Repository_Name]$Env:BUILD_REPOSITORY_NAME"
-    displayName: 'Set Environment Variables'
+    displayName: 'Set Build Variables from Environment'
+
+  - ${{ parameters.postCustomEnvironmentVariables }}
 
   - powershell: |
       Write-Host "Initializing $(Build.ArtifactStagingDirectory)/Release"
       New-Item -Path $(Build.ArtifactStagingDirectory) -Name "Release" -ItemType "directory"
     displayName: 'Initialize Artifact Staging Release Directory'
-
-  - ${{ parameters.postCustomEnvironmentVariables }}
 
   # Useful for debugging purposes
   - powershell: 'gci Env:'
@@ -94,12 +94,12 @@ jobs:
       Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$((-not ([string]::IsNullOrEmpty($PreReleaseTag))))"
       Write-Host "##vso[task.setvariable variable=Endjin_PreReleaseTag]$($PreReleaseTag))"
       Write-Host "##vso[task.setvariable variable=Endjin_SemVer]$($SemVer))"
-    displayName: 'Set Version Information Environment Variables'
+    displayName: 'Set Version Information Build Variables'
 
-    # Useful for debugging purposes
-  - powershell: 'gci Env:'
-    condition: or(variables['Endjin.BuildDiagnostics'], variables['Endjin.ShowEnvironment'])
-    displayName: 'Print Post-build Environment Variables'
+  # Scripted build (V0.1.0) currently doesn't do this for us.
+  - powershell: |
+      Write-Host "##vso[build.updatebuildnumber]$($Endjin_SemVer)"
+    displayName: 'Set Build Number'
 
   - ${{ parameters.prePublishCodeCoverageReport }}
 
