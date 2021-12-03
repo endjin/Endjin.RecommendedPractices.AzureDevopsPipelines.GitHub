@@ -93,7 +93,7 @@ jobs:
   - powershell: |
       Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$(-not ([string]::IsNullOrEmpty($Env:SemVer)))"
       Write-Host "##vso[task.setvariable variable=Endjin_PreReleaseTag]$Env:PreReleaseTag"
-      Write-Host "##vso[task.setvariable variable=Endjin_SemVer]$Env:SemVer)"
+      Write-Host "##vso[task.setvariable variable=Endjin_SemVer]$Env:SemVer"
     displayName: 'Set Version Information Build Variables'
     env:
       PreReleaseTag: $(PreReleaseTag)
