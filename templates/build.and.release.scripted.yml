@@ -91,10 +91,13 @@ jobs:
   # elsewhere in the script, so that if the scripted build is updated to reinstate the GITVERSION_
   # prefix for these build variables, we only have to change them in one place.
   - powershell: |
-      Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$((-not ([string]::IsNullOrEmpty($PreReleaseTag))))"
-      Write-Host "##vso[task.setvariable variable=Endjin_PreReleaseTag]$($PreReleaseTag))"
-      Write-Host "##vso[task.setvariable variable=Endjin_SemVer]$($SemVer))"
+      Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$(-not ([string]::IsNullOrEmpty($Env:SemVer)))"
+      Write-Host "##vso[task.setvariable variable=Endjin_PreReleaseTag]$Env:PreReleaseTag"
+      Write-Host "##vso[task.setvariable variable=Endjin_SemVer]$Env:SemVer)"
     displayName: 'Set Version Information Build Variables'
+    env:
+      PreReleaseTag: $(PreReleaseTag)
+      SemVer: $(SemVer)
 
   # Scripted build (V0.1.0) currently doesn't do this for us.
   - powershell: |
