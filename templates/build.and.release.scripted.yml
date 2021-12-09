@@ -34,6 +34,10 @@ jobs:
 
   variables:
     BuildConfiguration: 'Release'
+    ${{ if or(variables['Endjin.BuildDiagnostics'], variables['Endjin.ShowEnvironment']) }}
+      BuildScriptLogLevel: 'detailed'
+    ${{ else }}
+      BuildScriptLogLevel: 'minimal'
     DOTNET_CLI_TELEMETRY_OPTOUT: 1
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
 
@@ -75,6 +79,7 @@ jobs:
     inputs:
       targetType: 'filePath'
       filePath: "$(Build.SourcesDirectory)/build.ps1"
+      arguments: -Configuration $(BuildConfiguration) -BuildRepositoryUri $(Build.Repository.Uri) -SourcesDir $(Build.SourcesDirectory) -CoverageDir $(Build.SourcesDirectory)/CodeCoverage -LogLevel $(BuildScriptLogLevel)
       pwsh: true
     displayName: 'Run build.ps1'
 
