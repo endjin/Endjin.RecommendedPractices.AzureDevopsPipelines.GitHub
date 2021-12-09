@@ -1,0 +1,218 @@
+# This template is designed for builds using the Endjin.RecommendedPractices.Build module:
+#   https://www.powershellgallery.com/packages/Endjin.RecommendedPractices.Build
+#   https://github.com/endjin/Endjin.RecommendedPractices.Build
+# The majority of the build process is executed by a `build.ps1` script in the root of the
+# project.
+#
+# With scripted builds, many of the extensibility points exposed by `build.and.release.yml`
+# (e.g. `preBuild`, `postBuild`, `preRunExecutableSpecs`, etc.) are now supplied by the
+# build script, and not this Azure DevOps template.
+# However, there are still some extensibility points specific to the Azure DevOps pipeline
+# execution.
+parameters:
+  preCustomEnvironmentVariables: []
+  postCustomEnvironmentVariables: []
+  prePublishCodeCoverageReport: []
+  postPublishCodeCoverageReport: []
+  preCopyNugetPackages: []
+  postCopyNugetPackages: []
+  prePublishReleaseArtifacts: []
+  postPublishReleaseArtifacts: []
+  preCreateGitHubRelease: []
+  postCreateGitHubRelease: []
+  prePublishNugetPackages: []
+  postPublishNugetPackages: []
+  vmImage: ''
+  service_connection_nuget_org: ''
+  service_connection_github: ''
+  netSdkVersion: '6.x'
+
+jobs:
+- job: Build
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+
+  variables:
+    BuildConfiguration: 'Release'
+    ${{ if or(variables['Endjin.BuildDiagnostics'], variables['Endjin.ShowEnvironment']) }}:
+      BuildScriptLogLevel: 'detailed'
+    ${{ else }}:
+      BuildScriptLogLevel: 'minimal'
+    DOTNET_CLI_TELEMETRY_OPTOUT: 1
+    DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+
+    # We have dependencies on the following Environment Variables:
+    # BUILD_REPOSITORY_NAME
+
+    # We have dependencies on the following Build Variables:
+    # Endjin_Service_Connection_NuGet_Org
+    # Endjin_Service_Connection_GitHub
+    # Endjin_Slack_ReleasesWebhookUri
+    # Endjin.ForcePublish
+  steps:
+  - task: UseDotNet@2
+    displayName: 'Install .NET SDK ${{ parameters.netSdkVersion }}'
+    inputs:
+      packageType: sdk
+      version: ${{ parameters.netSdkVersion }}
+      installationPath: $(Agent.ToolsDirectory)/dotnet
+
+  - ${{ parameters.preCustomEnvironmentVariables }}
+
+  - powershell: |
+      Write-Host "##vso[task.setvariable variable=Endjin_Repository_Name]$Env:BUILD_REPOSITORY_NAME"
+    displayName: 'Set Build Variables from Environment'
+
+  - ${{ parameters.postCustomEnvironmentVariables }}
+
+  - powershell: |
+      Write-Host "Initializing $(Build.ArtifactStagingDirectory)/Release"
+      New-Item -Path $(Build.ArtifactStagingDirectory) -Name "Release" -ItemType "directory"
+    displayName: 'Initialize Artifact Staging Release Directory'
+
+  # Useful for debugging purposes
+  - powershell: 'gci Env:'
+    condition: or(variables['Endjin.BuildDiagnostics'], variables['Endjin.ShowEnvironment'])
+    displayName: 'Print Environment Variables'
+
+  - task: PowerShell@2
+    inputs:
+      targetType: 'filePath'
+      filePath: "$(Build.SourcesDirectory)/build.ps1"
+      arguments: -Configuration $(BuildConfiguration) -BuildRepositoryUri $(Build.Repository.Uri) -SourcesDir $(Build.SourcesDirectory) -CoverageDir $(Build.SourcesDirectory)/CodeCoverage -LogLevel $(BuildScriptLogLevel)
+      pwsh: true
+    displayName: 'Run build.ps1'
+
+  # In non-scripted builds, we run this step much earlier in the process - we can do it immediately
+  # after running GitVersion. But with scripted builds, GitVersion is run by `build.ps` so we can't
+  # use any of its outputs until after the scripted build runs.
+  # Scripted build 0.1.0 sets all the GitVersion outputs into environment variables with a
+  # GITVERSION_ prefix, but currently, due to this bug:
+  #  https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
+  # when it emits them as Build Variables, it does not include the prefix. Environment variable
+  # set by the build script are only available while the build script runs, so it's the build
+  # variables we have to depend on here.
+  # We're giving them an Endjin_ prefix here so we've got a stable name to refer to them by
+  # elsewhere in the script, so that if the scripted build is updated to reinstate the GITVERSION_
+  # prefix for these build variables, we only have to change them in one place.
+  - powershell: |
+      Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$(-not ([string]::IsNullOrEmpty($Env:SemVer)))"
+      Write-Host "##vso[task.setvariable variable=Endjin_PreReleaseTag]$Env:PreReleaseTag"
+      Write-Host "##vso[task.setvariable variable=Endjin_SemVer]$Env:SemVer"
+    displayName: 'Set Version Information Build Variables'
+    env:
+      PreReleaseTag: $(PreReleaseTag)
+      SemVer: $(SemVer)
+
+  # Scripted build (V0.1.0) currently doesn't do this for us.
+  - powershell: |
+      Write-Host "##vso[build.updatebuildnumber]$($Env:GitVersion_SemVer)"
+    displayName: 'Set Build Number'
+    env:
+      GitVersion_SemVer: $(Endjin_SemVer)
+
+  - ${{ parameters.prePublishCodeCoverageReport }}
+
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish Code Coverage Report'
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/Cobertura.xml'
+      reportDirectory: '$(Build.SourcesDirectory)/CodeCoverage'
+
+  - ${{ parameters.postPublishCodeCoverageReport }}
+
+  - ${{ parameters.preCopyNugetPackages }}
+
+  - task: CopyFiles@2
+    displayName: 'Copy Nuget Packages To Release Folder'
+    inputs:
+      SourceFolder: '$(Build.SourcesDirectory)'
+      Contents: |
+        _packages/**/*.nupkg
+        _packages/**/*.snupkg
+      TargetFolder: '$(Build.ArtifactStagingDirectory)/Release/NuGet'
+
+  - ${{ parameters.postCopyNugetPackages }}
+  - ${{ parameters.prePublishReleaseArtifacts }}
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Release Artifacts'
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)/Release'
+
+  - ${{ parameters.postPublishReleaseArtifacts }}
+
+  - task: NuGetToolInstaller@0
+    inputs:
+      versionSpec: '5.1.0'
+  
+  - ${{ parameters.preCreateGitHubRelease }}
+
+  - task: GithubRelease@0 
+    displayName: 'Create GitHub Release'
+    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['Endjin_PreReleaseTag'], '')))
+    inputs:
+      gitHubConnection: ${{ parameters.service_connection_github }}
+      repositoryName: $(Endjin_Repository_Name)
+      tagSource: manual
+      tag: $(Endjin_SemVer)
+      isPreRelease: $(Endjin_IsPreRelease)
+      assets: |
+          $(Build.ArtifactStagingDirectory)/Release/**
+
+  - ${{ parameters.postCreateGitHubRelease }}
+
+  - ${{ parameters.prePublishNugetPackages }}
+
+  - task: NuGetCommand@2
+    displayName: 'Publish to nuget.org'
+    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['Endjin_PreReleaseTag'], '')))
+    inputs:
+      command: push
+      nuGetFeedType: external
+      publishFeedCredentials: ${{ parameters.service_connection_nuget_org }}
+      versioningScheme: byBuildNumber
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/Release/**/*.nupkg'
+
+  - ${{ parameters.postPublishNugetPackages }}
+
+  - pwsh: |
+      $body = @{
+        username = "endjin-bot"
+        icon_emoji = ":mike:"
+      }
+
+      Write-Host "Build_ArtifactStagingDirectory: $($env:Build_ArtifactStagingDirectory)"
+      $packages = gci -Recurse -Filter *.nupkg -Path "$($env:Build_ArtifactStagingDirectory)/Release/NuGet/Packages"
+      Write-Host $packages
+
+      $blocks = @()
+      $blocks += @{ type = "header"; text = @{ type = "plain_text";  text = "New release for $($env:Endjin_Repository_Name) : $($env:GitVersion_SemVer)" } }
+      $blocks += @{ type = "section"; text = @{ type = "mrkdwn";  text = "The following packages have been published to <https://nuget.org|NuGet>:" } }
+
+      $packagesText = ""
+
+      foreach ($p in $packages) {
+          $packageName = [IO.Path]::GetFileNameWithoutExtension($p.Name) -replace ".$($env:GitVersion_SemVer)",""
+          $packagesText += "•  <https://nuget.org/packages/$packageName/$($env:GitVersion_SemVer)|$packageName>`n"
+      }
+
+      $blocks += @{ type = "section"; text = @{ type = "mrkdwn";  text = $packagesText } }
+      $blocks += @{ type = "divider" }
+      $blocks += @{ type = "section"; text = @{ type = "mrkdwn";  text = "The GitHub release can be found <https://github.com/$($env:Endjin_Repository_Name)/releases/tag/$($env:GitVersion_SemVer)|here>" } }
+
+      $body += @{ blocks = $blocks }
+      Write-Host "body:`n$(ConvertTo-Json $body -Depth 99)"
+      Invoke-RestMethod -uri "$($env:Endjin_Slack_ReleasesWebhookUri)" `
+                        -Method Post `
+                        -body (ConvertTo-Json $body -Depth 99) `
+                        -ContentType 'application/json'
+    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['Endjin_PreReleaseTag'], '')), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
+    displayName: Send notification to Slack channel
+    env:
+      Endjin_Slack_ReleasesWebhookUri: $(Endjin_Slack_ReleasesWebhookUri)
+      Endjin_Repository_Name: $(Endjin_Repository_Name)
+      GitVersion_SemVer: $(Endjin_SemVer)
+      Build_ArtifactStagingDirectory: $(Build.ArtifactStagingDirectory)
+      
