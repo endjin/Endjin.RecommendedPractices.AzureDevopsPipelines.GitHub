@@ -26,6 +26,14 @@ parameters:
   service_connection_github: '' 
   solution_to_build: ''
   netSdkVersion: '3.x'
+  # This optional parameter was added to allow the execution of 'nupkgversion' to be overridden
+  # and allows the source repo for this tool to run its locally-built binary rather
+  # than the global tool. This works-around an issue when upgrading the version of .NET
+  # for this tool whereby the older SDK is not available to install the current version
+  # of the global tool.
+  # By default the global tool will be used, otherwise the value should be a valid
+  # command-line for executing the tool (e.g. 'dotnet <some-path>/nupkgversion.dll')
+  nupkgversionToolPath: 'nupkgversion'
 
 jobs:
 - job: Build
@@ -142,13 +150,16 @@ jobs:
   - ${{ parameters.postCreateNuGetPackages }}
   
   - task: DotNetCoreCLI@2
+    condition: eq('${{ parameters.nupkgversionToolPath }}', 'nupkgversion')
     displayName: 'Install nupkgversion global tool'
     inputs:
       command: custom
       custom: tool
       arguments: install -g nupkgversion
 
-  - script: 'nupkgversion "$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)" https://api.nuget.org/v3/index.json'
+  - script: |
+      echo "NupkgversionToolPath: '${{ parameters.nupkgversionToolPath }}'"
+      ${{ parameters.nupkgversionToolPath }} "$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)" https://api.nuget.org/v3/index.json
     displayName: 'Run nupkgversion'
 
   - ${{ parameters.postPack }}
