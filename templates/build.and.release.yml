@@ -26,6 +26,14 @@ parameters:
   service_connection_github: '' 
   solution_to_build: ''
   netSdkVersion: '3.x'
+  # This optional parameter was added to allow the execution of 'nupkgversion' to be overridden
+  # and allows the source repo for this tool to run its locally-built binary rather
+  # than the global tool. This works-around an issue when upgrading the version of .NET
+  # for this tool whereby the older SDK is not available to install the current version
+  # of the global tool.
+  # When blank, the global tool will be used, otherwise the value should be a valid
+  # command-line for executing the tool (e.g. 'dotnet <some-path>/nupkgversion.dll')
+  nupkgversionToolPath: ''
 
 jobs:
 - job: Build
@@ -37,14 +45,6 @@ jobs:
     DOTNET_CLI_TELEMETRY_OPTOUT: 1
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
     SolutionToBuild: ${{ parameters.solution_to_build }}
-    # This variable was added to allow the execution of 'nupkgversion' to be overridden
-    # and allows the source repo for this tool to run its locally-built binary rather
-    # than the global tool. This works-around an issue when upgrading the version of .NET
-    # for this tool whereby the older SDK is not available to install the current version
-    # of the global tool.
-    # When blank, the global tool will be used, otherwise the value should be a valid
-    # command-line for executing the tool (e.g. 'dotnet <some-path>/nupkgversion.dll')
-    NupkgversionToolPath: ''
 
     # We have dependencies on the following Environment Variables:
     # GITVERSION_PRERELEASETAG
@@ -150,7 +150,7 @@ jobs:
   - ${{ parameters.postCreateNuGetPackages }}
   
   - task: DotNetCoreCLI@2
-    condition: eq('$[NupkgversionToolPath]', '')
+    condition: eq('${{ parameters.nupkgversionToolPath }}', '')
     displayName: 'Install nupkgversion global tool'
     inputs:
       command: custom
@@ -158,13 +158,13 @@ jobs:
       arguments: install -g nupkgversion
 
   - script: 'nupkgversion "$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)" https://api.nuget.org/v3/index.json'
-    condition: eq('$[NupkgversionToolPath]', '')
+    condition: eq('${{ parameters.nupkgversionToolPath }}', '')
     displayName: 'Run nupkgversion (global tool)'
 
   - script: |
-      echo "NupkgversionToolPath: '$(NupkgversionToolPath)'"
-      $(NupkgversionToolPath) "$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)" https://api.nuget.org/v3/index.json
-    condition: ne('$[NupkgversionToolPath]', '')
+      echo "NupkgversionToolPath: '${{ parameters.nupkgversionToolPath }}'"
+      ${{ parameters.nupkgversionToolPath }} "$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)" https://api.nuget.org/v3/index.json
+    condition: ne('${{ parameters.nupkgversionToolPath }}', '')
     displayName: 'Run nupkgversion (custom path)'
 
   - ${{ parameters.postPack }}
