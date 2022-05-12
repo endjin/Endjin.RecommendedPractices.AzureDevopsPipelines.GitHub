@@ -161,7 +161,9 @@ jobs:
     condition: eq('$[NupkgversionToolPath]', '')
     displayName: 'Run nupkgversion (global tool)'
 
-  - script: '$(NupkgversionToolPath) "$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)" https://api.nuget.org/v3/index.json'
+  - script: |
+      echo "NupkgversionToolPath: '$(NupkgversionToolPath)'"
+      $(NupkgversionToolPath) "$(Build.ArtifactStagingDirectory)/Packages/$(Build.BuildID)" https://api.nuget.org/v3/index.json
     condition: ne('$[NupkgversionToolPath]', '')
     displayName: 'Run nupkgversion (custom path)'
 
