@@ -50,8 +50,7 @@ jobs:
     # Endjin_Slack_ReleasesWebhookUri
     # Endjin.ForcePublish
   steps:
-  - checkout:
-    repository: self
+  - checkout: self
     submodules: recursive
 
   - task: UseDotNet@2
