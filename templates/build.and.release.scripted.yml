@@ -51,6 +51,7 @@ jobs:
     # Endjin.ForcePublish
   steps:
   - checkout:
+    repository: self
     submodules: recursive
 
   - task: UseDotNet@2
