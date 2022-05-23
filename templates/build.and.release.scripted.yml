@@ -50,6 +50,9 @@ jobs:
     # Endjin_Slack_ReleasesWebhookUri
     # Endjin.ForcePublish
   steps:
+  - checkout:
+    submodules: recursive
+
   - task: UseDotNet@2
     displayName: 'Install .NET SDK ${{ parameters.netSdkVersion }}'
     inputs:
