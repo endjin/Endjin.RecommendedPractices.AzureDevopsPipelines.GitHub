@@ -26,6 +26,7 @@ parameters:
   service_connection_nuget_org: ''
   service_connection_github: ''
   netSdkVersion: '6.x'
+  includePreviewNetSdkVersions: false
 
 jobs:
 - job: Build
@@ -57,6 +58,7 @@ jobs:
     displayName: 'Install .NET SDK ${{ parameters.netSdkVersion }}'
     inputs:
       packageType: sdk
+      includePreviewVersions: ${{ parameters.includePreviewNetSdkVersions }}
       version: ${{ parameters.netSdkVersion }}
       installationPath: $(Agent.ToolsDirectory)/dotnet
 
