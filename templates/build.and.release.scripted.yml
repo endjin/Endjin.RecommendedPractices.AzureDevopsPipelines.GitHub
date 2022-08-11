@@ -90,7 +90,7 @@ jobs:
           -SourcesDir $(Build.SourcesDirectory)
           -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
           -LogLevel $(BuildScriptLogLevel)
-          -Tasks "${{ taskList }}"
+          -Tasks ${{ taskList }}
         pwsh: true
       displayName: 'Run build.ps1 with tasks: ${{ taskList }}'
 
