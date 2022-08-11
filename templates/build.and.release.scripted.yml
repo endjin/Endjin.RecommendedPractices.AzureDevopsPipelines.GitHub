@@ -92,7 +92,7 @@ jobs:
           -LogLevel $(BuildScriptLogLevel)
           -Tasks ${{ taskList }}
         pwsh: true
-      displayName: 'Run build.ps1 with tasks: ${{ taskList }}'
+      displayName: 'Run Build: ${{ taskList }}'
 
   # In non-scripted builds, we run this step much earlier in the process - we can do it immediately
   # after running GitVersion. But with scripted builds, GitVersion is run by `build.ps` so we can't
