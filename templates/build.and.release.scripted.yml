@@ -26,7 +26,7 @@ parameters:
   service_connection_nuget_org: ''
   service_connection_github: ''
   netSdkVersion: '6.x'
-  buildTasks: '.'
+  buildTasks: ['.']
 
 jobs:
 - job: Build
@@ -79,19 +79,20 @@ jobs:
     condition: or(variables['Endjin.BuildDiagnostics'], variables['Endjin.ShowEnvironment'])
     displayName: 'Print Environment Variables'
 
-  - task: PowerShell@2
-    inputs:
-      targetType: 'filePath'
-      filePath: "$(Build.SourcesDirectory)/build.ps1"
-      arguments: >
-        -Configuration $(BuildConfiguration)
-        -BuildRepositoryUri $(Build.Repository.Uri)
-        -SourcesDir $(Build.SourcesDirectory)
-        -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
-        -LogLevel $(BuildScriptLogLevel)
-        -Tasks ${{ parameters.buildTasks }}
-      pwsh: true
-    displayName: 'Run build.ps1'
+  - ${{ each taskList in parameters.buildTasks }}:
+    - task: PowerShell@2
+      inputs:
+        targetType: 'filePath'
+        filePath: "$(Build.SourcesDirectory)/build.ps1"
+        arguments: >
+          -Configuration $(BuildConfiguration)
+          -BuildRepositoryUri $(Build.Repository.Uri)
+          -SourcesDir $(Build.SourcesDirectory)
+          -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
+          -LogLevel $(BuildScriptLogLevel)
+          -Tasks "${{ taskList }}"
+        pwsh: true
+      displayName: 'Run build.ps1 with tasks: ${{ taskList }}'
 
   # In non-scripted builds, we run this step much earlier in the process - we can do it immediately
   # after running GitVersion. But with scripted builds, GitVersion is run by `build.ps` so we can't
