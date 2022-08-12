@@ -92,7 +92,7 @@ jobs:
           -LogLevel $(BuildScriptLogLevel)
           -Tasks ${{ taskList }}
         pwsh: true
-      name: RunBuild
+      name: RunBuild_${{ replace(taskList, ',', '_') }}
       displayName: 'Run Build: ${{ taskList }}'
       env:
         BUILDVAR_DotNetTestLogger: AzurePipelines
@@ -119,12 +119,12 @@ jobs:
       PreReleaseTag: $(PreReleaseTag)
       SemVer: $(SemVer)
 
-  # Scripted build (V0.1.0) currently doesn't do this for us.
-  - powershell: |
-      Write-Host "##vso[build.updatebuildnumber]$($Env:GitVersion_SemVer)"
-    displayName: 'Set Build Number'
-    env:
-      GitVersion_SemVer: $(Endjin_SemVer)
+  # # Scripted build (V0.1.0) currently doesn't do this for us.
+  # - powershell: |
+  #     Write-Host "##vso[build.updatebuildnumber]$($Env:GitVersion_SemVer)"
+  #   displayName: 'Set Build Number'
+  #   env:
+  #     GitVersion_SemVer: $(Endjin_SemVer)
 
   - ${{ parameters.prePublishCodeCoverageReport }}
 
@@ -135,11 +135,12 @@ jobs:
       summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/Cobertura.xml'
       reportDirectory: '$(Build.SourcesDirectory)/CodeCoverage'
 
-  - powershell: |
-      Write-Host "SbomHtmlReportPath: $($env:HadesHtmlPath)"
-    displayName: 'Debug looped output variables'
-    env:
-      HadesHtmlPath: '$(RunBuild.SbomHtmlReportPath)'
+  - ${{ each taskList in parameters.buildTasks }}:
+    - powershell: |
+        Write-Host "SbomHtmlReportPath: $($env:HadesHtmlPath)"
+      displayName: 'Debug looped output variables'
+      env:
+        HadesHtmlPath: '$(RunBuild_${{ replace(taskList, ",", '_') }}.SbomHtmlReportPath)'
   
   # ref: https://marketplace.visualstudio.com/items?itemName=LakshayKaushik.PublishHTMLReports
   - task: publishhtmlreport@1
