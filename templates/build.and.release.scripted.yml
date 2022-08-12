@@ -26,7 +26,9 @@ parameters:
   service_connection_nuget_org: ''
   service_connection_github: ''
   netSdkVersion: '6.x'
-  buildTasks: ['.']
+  compileTasks: ['Build','Analysis']
+  testTasks: ['Test','TestReport']
+  packageTasks: ['Package']
 
 jobs:
 - job: Build
@@ -79,28 +81,21 @@ jobs:
     condition: or(variables['Endjin.BuildDiagnostics'], variables['Endjin.ShowEnvironment'])
     displayName: 'Print Environment Variables'
 
-  - ${{ each taskList in parameters.buildTasks }}:
-    - task: PowerShell@2
-      inputs:
-        targetType: 'filePath'
-        filePath: "$(Build.SourcesDirectory)/build.ps1"
-        arguments: >
-          -Configuration $(BuildConfiguration)
-          -BuildRepositoryUri $(Build.Repository.Uri)
-          -SourcesDir $(Build.SourcesDirectory)
-          -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
-          -LogLevel $(BuildScriptLogLevel)
-          -Tasks ${{ taskList }}
-        pwsh: true
-      name: RunBuild_${{ replace(taskList, ',', '_') }}
-      displayName: 'Run Build: ${{ taskList }}'
-      env:
-        BUILDVAR_DotNetTestLogger: AzurePipelines
-        SYSTEM_ACCESSTOKEN: $(System.AccessToken)     # required by the above custom logger
+  - task: PowerShell@2
+    inputs:
+      targetType: 'filePath'
+      filePath: "$(Build.SourcesDirectory)/build.ps1"
+      arguments: >
+        -Configuration $(BuildConfiguration)
+        -BuildRepositoryUri $(Build.Repository.Uri)
+        -SourcesDir $(Build.SourcesDirectory)
+        -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
+        -LogLevel $(BuildScriptLogLevel)
+        -Tasks ${{ parameters.compileTasks }}
+      pwsh: true
+    name: RunCompile
+    displayName: 'Build Solution'
 
-  # In non-scripted builds, we run this step much earlier in the process - we can do it immediately
-  # after running GitVersion. But with scripted builds, GitVersion is run by `build.ps1` so we can't
-  # use any of its outputs until after the scripted build runs.
   # Scripted build 0.1.0 sets all the GitVersion outputs into environment variables with a
   # GITVERSION_ prefix, but currently, due to this bug:
   #  https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
@@ -119,6 +114,31 @@ jobs:
       PreReleaseTag: $(PreReleaseTag)
       SemVer: $(SemVer)
 
+  # ref: https://marketplace.visualstudio.com/items?itemName=LakshayKaushik.PublishHTMLReports
+  - task: publishhtmlreport@1
+    displayName: 'Publish SBOM Report'
+    inputs:
+      htmlType: 'genericHTML'
+      htmlPath: '$(RunCompile.SbomHtmlReportPath)'
+
+  - task: PowerShell@2
+    inputs:
+      targetType: 'filePath'
+      filePath: "$(Build.SourcesDirectory)/build.ps1"
+      arguments: >
+        -Configuration $(BuildConfiguration)
+        -BuildRepositoryUri $(Build.Repository.Uri)
+        -SourcesDir $(Build.SourcesDirectory)
+        -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
+        -LogLevel $(BuildScriptLogLevel)
+        -Tasks ${{ parameters.testTasks }}
+      pwsh: true
+    name: RunTests
+    displayName: 'Run Tests'
+    env:
+      BUILDVAR_DotNetTestLogger: AzurePipelines
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)     # required by the above custom logger
+
   # # Scripted build (V0.1.0) currently doesn't do this for us.
   # - powershell: |
   #     Write-Host "##vso[build.updatebuildnumber]$($Env:GitVersion_SemVer)"
@@ -135,21 +155,22 @@ jobs:
       summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/Cobertura.xml'
       reportDirectory: '$(Build.SourcesDirectory)/CodeCoverage'
 
-  - ${{ each taskList in parameters.buildTasks }}:
-    - powershell: |
-        Write-Host "SbomHtmlReportPath: $($env:HadesHtmlPath)"
-      displayName: 'Debug looped output variables'
-      env:
-        HadesHtmlPath: '$(RunBuild_${{ replace(taskList, ",", '_') }}.SbomHtmlReportPath)'
-  
-  # ref: https://marketplace.visualstudio.com/items?itemName=LakshayKaushik.PublishHTMLReports
-  - task: publishhtmlreport@1
-    displayName: 'Publish SBOM Report'
-    inputs:
-      htmlType: 'genericHTML'
-      htmlPath: '$(RunBuild.SbomHtmlReportPath)'
-
   - ${{ parameters.postPublishCodeCoverageReport }}
+
+  - task: PowerShell@2
+    inputs:
+      targetType: 'filePath'
+      filePath: "$(Build.SourcesDirectory)/build.ps1"
+      arguments: >
+        -Configuration $(BuildConfiguration)
+        -BuildRepositoryUri $(Build.Repository.Uri)
+        -SourcesDir $(Build.SourcesDirectory)
+        -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
+        -LogLevel $(BuildScriptLogLevel)
+        -Tasks ${{ parameters.packageTasks }}
+      pwsh: true
+    name: RunPackage
+    displayName: 'Build Packages'
 
   - ${{ parameters.preCopyNugetPackages }}
 
