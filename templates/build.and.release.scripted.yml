@@ -92,6 +92,7 @@ jobs:
           -LogLevel $(BuildScriptLogLevel)
           -Tasks ${{ taskList }}
         pwsh: true
+      name: RunBuild
       displayName: 'Run Build: ${{ taskList }}'
       env:
         BUILDVAR_DotNetTestLogger: AzurePipelines
@@ -133,6 +134,19 @@ jobs:
       codeCoverageTool: Cobertura
       summaryFileLocation: '$(Build.SourcesDirectory)/CodeCoverage/Cobertura.xml'
       reportDirectory: '$(Build.SourcesDirectory)/CodeCoverage'
+
+  - powershell: |
+      Write-Host "SbomHtmlReportPath: $($env:HadesHtmlPath)"
+    displayName: 'Debug looped output variables'
+    env:
+      HadesHtmlPath: '$(RunBuild.SbomHtmlReportPath)'
+  
+  # ref: https://marketplace.visualstudio.com/items?itemName=LakshayKaushik.PublishHTMLReports
+  - task: publishhtmlreport@1
+    displayName: 'Publish SBOM Report'
+    inputs:
+      htmlType: 'genericHTML'
+      htmlPath: '$(RunBuild.SbomHtmlReportPath)'
 
   - ${{ parameters.postPublishCodeCoverageReport }}
 
