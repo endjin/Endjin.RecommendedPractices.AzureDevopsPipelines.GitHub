@@ -26,9 +26,9 @@ parameters:
   service_connection_nuget_org: ''
   service_connection_github: ''
   netSdkVersion: '6.x'
-  compileTasks: ['Build','Analysis']
-  testTasks: ['Test','TestReport']
-  packageTasks: ['Package']
+  compileTasks: 'Build,Analysis'
+  testTasks: 'Test,TestReport'
+  packageTasks: 'Package'
 
 jobs:
 - job: Build
