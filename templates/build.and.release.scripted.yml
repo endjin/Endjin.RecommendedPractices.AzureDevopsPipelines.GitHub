@@ -220,7 +220,7 @@ jobs:
 
   - pwsh: |
       Write-Host "I would have released things!!!"
-    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['Endjin_PreReleaseTag'], '')))
+    condition: and(succeeded(), or(eq(variables['Endjin.ForcePublish'], 'true'), eq(variables['Endjin_PreReleaseTag'], '')))
 
   # - task: GithubRelease@0 
   #   displayName: 'Create GitHub Release'
