@@ -214,39 +214,36 @@ jobs:
   - pwsh: |
       Write-Host "Endjin.ForcePublish: '$($env:Endjin_ForcePublish)'"
       Write-Host "Endjin_PreReleaseTag: '$($env:Endjin_PreReleaseTag)'"
+    displayName: Debug release condition parameters
     env:
       Endjin_ForcePublish: $(Endjin.ForcePublish)
       Endjin_PreReleaseTag: $(Endjin_PreReleaseTag)
 
-  - pwsh: |
-      Write-Host "I would have released things!!!"
+  - task: GithubRelease@0 
+    displayName: 'Create GitHub Release'
     condition: and(succeeded(), or(eq(variables['Endjin.ForcePublish'], 'true'), eq(variables['Endjin_PreReleaseTag'], '')))
-
-  # - task: GithubRelease@0 
-  #   displayName: 'Create GitHub Release'
-  #   condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['Endjin_PreReleaseTag'], '')))
-  #   inputs:
-  #     gitHubConnection: ${{ parameters.service_connection_github }}
-  #     repositoryName: $(Endjin_Repository_Name)
-  #     tagSource: manual
-  #     tag: $(Endjin_SemVer)
-  #     isPreRelease: $(Endjin_IsPreRelease)
-  #     assets: |
-  #         $(Build.ArtifactStagingDirectory)/Release/**
+    inputs:
+      gitHubConnection: ${{ parameters.service_connection_github }}
+      repositoryName: $(Endjin_Repository_Name)
+      tagSource: manual
+      tag: $(Endjin_SemVer)
+      isPreRelease: $(Endjin_IsPreRelease)
+      assets: |
+          $(Build.ArtifactStagingDirectory)/Release/**
 
   - ${{ parameters.postCreateGitHubRelease }}
 
   - ${{ parameters.prePublishNugetPackages }}
 
-  # - task: NuGetCommand@2
-  #   displayName: 'Publish to nuget.org'
-  #   condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['Endjin_PreReleaseTag'], '')))
-  #   inputs:
-  #     command: push
-  #     nuGetFeedType: external
-  #     publishFeedCredentials: ${{ parameters.service_connection_nuget_org }}
-  #     versioningScheme: byBuildNumber
-  #     packagesToPush: '$(Build.ArtifactStagingDirectory)/Release/**/*.nupkg'
+  - task: NuGetCommand@2
+    displayName: 'Publish to nuget.org'
+    condition: and(succeeded(), or(eq(variables['Endjin.ForcePublish'], 'true'), eq(variables['Endjin_PreReleaseTag'], '')))
+    inputs:
+      command: push
+      nuGetFeedType: external
+      publishFeedCredentials: ${{ parameters.service_connection_nuget_org }}
+      versioningScheme: byBuildNumber
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/Release/**/*.nupkg'
 
   - ${{ parameters.postPublishNugetPackages }}
 
@@ -281,7 +278,7 @@ jobs:
                         -Method Post `
                         -body (ConvertTo-Json $body -Depth 99) `
                         -ContentType 'application/json'
-    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['Endjin_PreReleaseTag'], '')), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
+    condition: and(succeeded(), or(eq(variables['Endjin.ForcePublish'], 'true'), eq(variables['Endjin_PreReleaseTag'], '')), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
     displayName: Send notification to Slack channel
     env:
       Endjin_Slack_ReleasesWebhookUri: $(Endjin_Slack_ReleasesWebhookUri)
