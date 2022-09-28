@@ -26,6 +26,7 @@ parameters:
   service_connection_nuget_org: ''
   service_connection_github: ''
   netSdkVersion: '6.x'
+  includeNetSdkPreviewVersions: 'false'
   compileTasks: 'Build,Analysis'
   testTasks: 'Test,TestReport'
   packageTasks: 'Package'
@@ -61,6 +62,7 @@ jobs:
     inputs:
       packageType: sdk
       version: ${{ parameters.netSdkVersion }}
+      includePreviewVersions: ${{ parameters.includeNetSdkPreviewVersions }}
       installationPath: $(Agent.ToolsDirectory)/dotnet
 
   - ${{ parameters.preCustomEnvironmentVariables }}
