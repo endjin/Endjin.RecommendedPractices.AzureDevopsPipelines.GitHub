@@ -26,7 +26,11 @@ parameters:
   service_connection_nuget_org: ''
   service_connection_github: ''
   netSdkVersion: '6.x'
+  additionalNetSdkVersions: []
   includeNetSdkPreviewVersions: 'false'
+  compileTasks: 'Build,Analysis'
+  testTasks: 'Test,TestReport'
+  packageTasks: 'Package'
 
 jobs:
 - job: Build
@@ -62,6 +66,15 @@ jobs:
       includePreviewVersions: ${{ parameters.includeNetSdkPreviewVersions }}
       installationPath: $(Agent.ToolsDirectory)/dotnet
 
+  - ${{ each sdkVersion in parameters.additionalNetSdkVersions }}:
+    - task: UseDotNet@2
+      displayName: 'Install .NET SDK ${{ sdkVersion }}'
+      inputs:
+        packageType: sdk
+        version: ${{ sdkVersion }}
+        includePreviewVersions: ${{ parameters.includeNetSdkPreviewVersions }}
+        installationPath: $(Agent.ToolsDirectory)/dotnet
+
   - ${{ parameters.preCustomEnvironmentVariables }}
 
   - powershell: |
@@ -84,13 +97,17 @@ jobs:
     inputs:
       targetType: 'filePath'
       filePath: "$(Build.SourcesDirectory)/build.ps1"
-      arguments: -Configuration $(BuildConfiguration) -BuildRepositoryUri $(Build.Repository.Uri) -SourcesDir $(Build.SourcesDirectory) -CoverageDir $(Build.SourcesDirectory)/CodeCoverage -LogLevel $(BuildScriptLogLevel)
+      arguments: >
+        -Configuration $(BuildConfiguration)
+        -BuildRepositoryUri $(Build.Repository.Uri)
+        -SourcesDir $(Build.SourcesDirectory)
+        -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
+        -LogLevel $(BuildScriptLogLevel)
+        -Tasks ${{ parameters.compileTasks }}
       pwsh: true
-    displayName: 'Run build.ps1'
+    name: RunCompile
+    displayName: 'Build Solution'
 
-  # In non-scripted builds, we run this step much earlier in the process - we can do it immediately
-  # after running GitVersion. But with scripted builds, GitVersion is run by `build.ps` so we can't
-  # use any of its outputs until after the scripted build runs.
   # Scripted build 0.1.0 sets all the GitVersion outputs into environment variables with a
   # GITVERSION_ prefix, but currently, due to this bug:
   #  https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
@@ -109,12 +126,37 @@ jobs:
       PreReleaseTag: $(PreReleaseTag)
       SemVer: $(SemVer)
 
-  # Scripted build (V0.1.0) currently doesn't do this for us.
-  - powershell: |
-      Write-Host "##vso[build.updatebuildnumber]$($Env:GitVersion_SemVer)"
-    displayName: 'Set Build Number'
+  # ref: https://marketplace.visualstudio.com/items?itemName=LakshayKaushik.PublishHTMLReports
+  - task: publishhtmlreport@1
+    displayName: 'Publish SBOM Report'
+    inputs:
+      htmlType: 'genericHTML'
+      htmlPath: '$(RunCompile.SbomHtmlReportPath)'
+
+  - task: PowerShell@2
+    inputs:
+      targetType: 'filePath'
+      filePath: "$(Build.SourcesDirectory)/build.ps1"
+      arguments: >
+        -Configuration $(BuildConfiguration)
+        -BuildRepositoryUri $(Build.Repository.Uri)
+        -SourcesDir $(Build.SourcesDirectory)
+        -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
+        -LogLevel $(BuildScriptLogLevel)
+        -Tasks ${{ parameters.testTasks }}
+      pwsh: true
+    name: RunTests
+    displayName: 'Run Tests'
     env:
-      GitVersion_SemVer: $(Endjin_SemVer)
+      BUILDVAR_DotNetTestLogger: AzurePipelines
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)     # required by the above custom logger
+
+  # # Scripted build (V0.1.0) currently doesn't do this for us.
+  # - powershell: |
+  #     Write-Host "##vso[build.updatebuildnumber]$($Env:GitVersion_SemVer)"
+  #   displayName: 'Set Build Number'
+  #   env:
+  #     GitVersion_SemVer: $(Endjin_SemVer)
 
   - ${{ parameters.prePublishCodeCoverageReport }}
 
@@ -126,6 +168,21 @@ jobs:
       reportDirectory: '$(Build.SourcesDirectory)/CodeCoverage'
 
   - ${{ parameters.postPublishCodeCoverageReport }}
+
+  - task: PowerShell@2
+    inputs:
+      targetType: 'filePath'
+      filePath: "$(Build.SourcesDirectory)/build.ps1"
+      arguments: >
+        -Configuration $(BuildConfiguration)
+        -BuildRepositoryUri $(Build.Repository.Uri)
+        -SourcesDir $(Build.SourcesDirectory)
+        -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
+        -LogLevel $(BuildScriptLogLevel)
+        -Tasks ${{ parameters.packageTasks }}
+      pwsh: true
+    name: RunPackage
+    displayName: 'Build Packages'
 
   - ${{ parameters.preCopyNugetPackages }}
 
@@ -154,9 +211,17 @@ jobs:
   
   - ${{ parameters.preCreateGitHubRelease }}
 
+  - pwsh: |
+      Write-Host "Endjin.ForcePublish: '$($env:Endjin_ForcePublish)'"
+      Write-Host "Endjin_PreReleaseTag: '$($env:Endjin_PreReleaseTag)'"
+    displayName: Debug release condition parameters
+    env:
+      Endjin_ForcePublish: $(Endjin.ForcePublish)
+      Endjin_PreReleaseTag: $(Endjin_PreReleaseTag)
+
   - task: GithubRelease@0 
     displayName: 'Create GitHub Release'
-    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['Endjin_PreReleaseTag'], '')))
+    condition: and(succeeded(), or(eq(variables['Endjin.ForcePublish'], 'true'), eq(variables['Endjin_PreReleaseTag'], '')))
     inputs:
       gitHubConnection: ${{ parameters.service_connection_github }}
       repositoryName: $(Endjin_Repository_Name)
@@ -172,7 +237,7 @@ jobs:
 
   - task: NuGetCommand@2
     displayName: 'Publish to nuget.org'
-    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['Endjin_PreReleaseTag'], '')))
+    condition: and(succeeded(), or(eq(variables['Endjin.ForcePublish'], 'true'), eq(variables['Endjin_PreReleaseTag'], '')))
     inputs:
       command: push
       nuGetFeedType: external
@@ -213,7 +278,7 @@ jobs:
                         -Method Post `
                         -body (ConvertTo-Json $body -Depth 99) `
                         -ContentType 'application/json'
-    condition: and(succeeded(), or(variables['Endjin.ForcePublish'], eq(variables['Endjin_PreReleaseTag'], '')), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
+    condition: and(succeeded(), or(eq(variables['Endjin.ForcePublish'], 'true'), eq(variables['Endjin_PreReleaseTag'], '')), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
     displayName: Send notification to Slack channel
     env:
       Endjin_Slack_ReleasesWebhookUri: $(Endjin_Slack_ReleasesWebhookUri)
