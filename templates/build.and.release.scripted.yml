@@ -46,6 +46,7 @@ jobs:
       BuildScriptLogLevel: 'minimal'
     DOTNET_CLI_TELEMETRY_OPTOUT: 1
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+    PackagesOutputDirName: '_packages'
 
     # We have dependencies on the following Environment Variables:
     # BUILD_REPOSITORY_NAME
@@ -184,6 +185,7 @@ jobs:
         -BuildRepositoryUri $(Build.Repository.Uri)
         -SourcesDir $(Build.SourcesDirectory)
         -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
+        -PackagesDir $(PackagesOutputDirName)
         -LogLevel $(BuildScriptLogLevel)
         -Tasks ${{ parameters.packageTasks }}
       pwsh: true
@@ -197,8 +199,8 @@ jobs:
     inputs:
       SourceFolder: '$(Build.SourcesDirectory)'
       Contents: |
-        _packages/**/*.nupkg
-        _packages/**/*.snupkg
+        $(PackagesOutputDirName)/**/*.nupkg
+        $(PackagesOutputDirName)/**/*.snupkg
       TargetFolder: '$(Build.ArtifactStagingDirectory)/Release/NuGet'
 
   - ${{ parameters.postCopyNugetPackages }}
@@ -260,7 +262,7 @@ jobs:
       }
 
       Write-Host "Build_ArtifactStagingDirectory: $($env:Build_ArtifactStagingDirectory)"
-      $packages = gci -Recurse -Filter *.nupkg -Path "$($env:Build_ArtifactStagingDirectory)/Release/NuGet/Packages"
+      $packages = gci -Recurse -Filter *.nupkg -Path "$($env:Build_ArtifactStagingDirectory)/Release/NuGet/$($env:BuildPackagesOutputDirName)"
       Write-Host $packages
 
       $blocks = @()
@@ -291,4 +293,5 @@ jobs:
       Endjin_Repository_Name: $(Endjin_Repository_Name)
       GitVersion_SemVer: $(Endjin_SemVer)
       Build_ArtifactStagingDirectory: $(Build.ArtifactStagingDirectory)
+      BuildPackagesOutputDirName: $(PackagesOutputDirName)
       
