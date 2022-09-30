@@ -31,6 +31,7 @@ parameters:
   compileTasks: 'Build,Analysis'
   testTasks: 'Test,TestReport'
   packageTasks: 'Package'
+  analysisOutputSasToken: ''
 
 jobs:
 - job: Build
@@ -107,6 +108,11 @@ jobs:
       pwsh: true
     name: RunCompile
     displayName: 'Build Solution'
+    env:
+      BUILDVAR_AnalysisOutputStorageAccountName: endsynapsedatalake
+      BUILDVAR_AnalysisOutputContainerName: data
+      BUILDVAR_AnalysisOutputBlobPath: openchain/hades/raw
+      BUILDVAR_AnalysisOutputSasToken: ${{ parameters.analysisOutputSasToken }}
 
   # Scripted build 0.1.0 sets all the GitVersion outputs into environment variables with a
   # GITVERSION_ prefix, but currently, due to this bug:
