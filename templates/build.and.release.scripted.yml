@@ -181,6 +181,7 @@ jobs:
 
 
 - job: Test
+  dependsOn: Build
   pool:
     vmImage: ${{ parameters.vmImage }}
 
@@ -236,6 +237,7 @@ jobs:
 
 
 - job: Package
+  dependsOn: Test
   pool:
     vmImage: ${{ parameters.vmImage }}
 
