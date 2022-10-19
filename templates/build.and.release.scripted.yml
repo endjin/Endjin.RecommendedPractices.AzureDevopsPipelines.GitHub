@@ -31,7 +31,7 @@ parameters:
   compileTasks: 'Build,Analysis'
   testTasks: 'Test,TestReport'
   packageTasks: 'Package'
-  analysisOutputSasToken: ''
+  compileTasksServiceConnection: ''
 
 jobs:
 - job: Build
@@ -95,25 +95,57 @@ jobs:
     condition: or(variables['Endjin.BuildDiagnostics'], variables['Endjin.ShowEnvironment'])
     displayName: 'Print Environment Variables'
 
-  - task: PowerShell@2
-    inputs:
-      targetType: 'filePath'
-      filePath: "$(Build.SourcesDirectory)/build.ps1"
-      arguments: >
-        -Configuration $(BuildConfiguration)
-        -BuildRepositoryUri $(Build.Repository.Uri)
-        -SourcesDir $(Build.SourcesDirectory)
-        -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
-        -LogLevel $(BuildScriptLogLevel)
-        -Tasks ${{ parameters.compileTasks }}
-      pwsh: true
-    name: RunCompile
-    displayName: 'Build Solution'
-    env:
-      BUILDVAR_AnalysisOutputStorageAccountName: endsynapsedatalake
-      BUILDVAR_AnalysisOutputContainerName: data
-      BUILDVAR_AnalysisOutputBlobPath: openchain/hades/raw
-      BUILDVAR_AnalysisOutputSasToken: ${{ parameters.analysisOutputSasToken }}
+  ${{ if eq(parameters['compileTasksServiceConnection'], '') }}:
+    - task: PowerShell@2
+      inputs:
+        targetType: 'filePath'
+        scriptPath: "$(Build.SourcesDirectory)/build.ps1"
+        arguments: >
+          -Configuration $(BuildConfiguration)
+          -BuildRepositoryUri $(Build.Repository.Uri)
+          -SourcesDir $(Build.SourcesDirectory)
+          -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
+          -LogLevel $(BuildScriptLogLevel)
+          -Tasks ${{ parameters.compileTasks }}
+        pwsh: true
+      name: RunCompile
+      displayName: 'Build Solution'
+      env:
+        BUILDVAR_AnalysisOutputStorageAccountName: endsynapsedatalake
+        BUILDVAR_AnalysisOutputContainerName: data
+        BUILDVAR_AnalysisOutputBlobPath: openchain/covenant/raw
+        BUILDVAR_CovenantMetadata: >
+          {
+            "git_repo": "${{ variables.Build.Repository.Name }}",
+            "git_branch": "${{ variables.Build.SourceBranch }}", 
+            "git_sha": "${{ variables.Build.SourceVersion }}"
+          }
+  ${{ else }}:
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: ${{ parameters.compileTasksServiceConnection }}
+        scriptType: pscore
+        scriptLocation: scriptPath
+                scriptPath: "$(Build.SourcesDirectory)/build.ps1"
+        arguments: >
+          -Configuration $(BuildConfiguration)
+          -BuildRepositoryUri $(Build.Repository.Uri)
+          -SourcesDir $(Build.SourcesDirectory)
+          -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
+          -LogLevel $(BuildScriptLogLevel)
+          -Tasks ${{ parameters.compileTasks }}
+      name: RunCompile
+      displayName: 'Build Solution'
+      env:
+        BUILDVAR_AnalysisOutputStorageAccountName: endsynapsedatalake
+        BUILDVAR_AnalysisOutputContainerName: data
+        BUILDVAR_AnalysisOutputBlobPath: openchain/covenant/raw
+        BUILDVAR_CovenantMetadata: >
+          {
+            "git_repo": "${{ variables.Build.Repository.Name }}",
+            "git_branch": "${{ variables.Build.SourceBranch }}", 
+            "git_sha": "${{ variables.Build.SourceVersion }}"
+          }
 
   # Scripted build 0.1.0 sets all the GitVersion outputs into environment variables with a
   # GITVERSION_ prefix, but currently, due to this bug:
@@ -155,8 +187,7 @@ jobs:
     name: RunTests
     displayName: 'Run Tests'
     env:
-      BUILDVAR_DotNetTestLogger: AzurePipelines
-      SYSTEM_ACCESSTOKEN: $(System.AccessToken)     # required by the above custom logger
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)     # required by the custom test logger
 
   # # Scripted build (V0.1.0) currently doesn't do this for us.
   # - powershell: |
