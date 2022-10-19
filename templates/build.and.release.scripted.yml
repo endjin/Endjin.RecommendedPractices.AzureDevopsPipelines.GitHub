@@ -98,8 +98,8 @@ jobs:
   - task: PowerShell@2
     condition: and(succeeded(), eq('${{ parameters.compileTasksServiceConnection }}', ''))
     inputs:
-      targetType: 'filePath'
-      scriptPath: "$(Build.SourcesDirectory)/build.ps1"
+      targetType: filePath
+      filePath: $(Build.SourcesDirectory)/build.ps1
       arguments: >
         -Configuration $(BuildConfiguration)
         -BuildRepositoryUri $(Build.Repository.Uri)
@@ -125,7 +125,7 @@ jobs:
       azureSubscription: ${{ parameters.compileTasksServiceConnection }}
       scriptType: pscore
       scriptLocation: scriptPath
-      scriptPath: "$(Build.SourcesDirectory)/build.ps1"
+      scriptPath: $(Build.SourcesDirectory)/build.ps1
       arguments: >
         -Configuration $(BuildConfiguration)
         -BuildRepositoryUri $(Build.Repository.Uri)
