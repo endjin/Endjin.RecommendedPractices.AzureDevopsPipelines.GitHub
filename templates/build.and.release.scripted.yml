@@ -254,6 +254,7 @@ jobs:
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
     PackagesOutputDirName: '_packages'
   steps:
+  - checkout: self    # ensure we have a git reference to support later tasks
   - task: DownloadPipelineArtifact@2
     inputs:
       buildType: 'current'
