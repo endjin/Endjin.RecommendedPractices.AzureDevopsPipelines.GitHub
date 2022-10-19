@@ -96,7 +96,7 @@ jobs:
     displayName: 'Print Environment Variables'
 
   - task: PowerShell@2
-    condition: and(succeeded(), ne('${{ parameters.compileTasksServiceConnection }}', ''))
+    condition: and(succeeded(), eq('${{ parameters.compileTasksServiceConnection }}', ''))
     inputs:
       targetType: 'filePath'
       scriptPath: "$(Build.SourcesDirectory)/build.ps1"
@@ -109,7 +109,7 @@ jobs:
         -Tasks ${{ parameters.compileTasks }}
       pwsh: true
     name: RunCompile
-    displayName: 'Build Solution'
+    displayName: 'Build Solution (no auth)'
     env:
       BUILDVAR_PublishCovenantOutputToStorage: 'False'
       BUILDVAR_CovenantMetadata: >
@@ -134,7 +134,7 @@ jobs:
         -LogLevel $(BuildScriptLogLevel)
         -Tasks ${{ parameters.compileTasks }}
     name: RunCompile_with_AzAuth
-    displayName: 'Build Solution'
+    displayName: 'Build Solution (with auth)'
     env:
       BUILDVAR_AnalysisOutputStorageAccountName: endsynapsedatalake
       BUILDVAR_AnalysisOutputContainerName: data
