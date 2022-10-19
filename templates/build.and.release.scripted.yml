@@ -95,56 +95,57 @@ jobs:
     condition: or(variables['Endjin.BuildDiagnostics'], variables['Endjin.ShowEnvironment'])
     displayName: 'Print Environment Variables'
 
-  ${{ if eq(parameters['compileTasksServiceConnection'], '') }}:
-    - task: PowerShell@2
-      inputs:
-        targetType: 'filePath'
-        scriptPath: "$(Build.SourcesDirectory)/build.ps1"
-        arguments: >
-          -Configuration $(BuildConfiguration)
-          -BuildRepositoryUri $(Build.Repository.Uri)
-          -SourcesDir $(Build.SourcesDirectory)
-          -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
-          -LogLevel $(BuildScriptLogLevel)
-          -Tasks ${{ parameters.compileTasks }}
-        pwsh: true
-      name: RunCompile
-      displayName: 'Build Solution'
-      env:
-        BUILDVAR_PublishCovenantOutputToStorage: 'False'
-        BUILDVAR_CovenantMetadata: >
-          {
-            "git_repo": "${{ variables.Build.Repository.Name }}",
-            "git_branch": "${{ variables.Build.SourceBranch }}", 
-            "git_sha": "${{ variables.Build.SourceVersion }}"
-          }
-  ${{ else }}:
-    - task: AzureCLI@2
-      inputs:
-        azureSubscription: ${{ parameters.compileTasksServiceConnection }}
-        scriptType: pscore
-        scriptLocation: scriptPath
-                scriptPath: "$(Build.SourcesDirectory)/build.ps1"
-        arguments: >
-          -Configuration $(BuildConfiguration)
-          -BuildRepositoryUri $(Build.Repository.Uri)
-          -SourcesDir $(Build.SourcesDirectory)
-          -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
-          -LogLevel $(BuildScriptLogLevel)
-          -Tasks ${{ parameters.compileTasks }}
-      name: RunCompile
-      displayName: 'Build Solution'
-      env:
-        BUILDVAR_AnalysisOutputStorageAccountName: endsynapsedatalake
-        BUILDVAR_AnalysisOutputContainerName: data
-        BUILDVAR_AnalysisOutputBlobPath: openchain/covenant/raw
-        BUILDVAR_PublishCovenantOutputToStorage: 'True'
-        BUILDVAR_CovenantMetadata: >
-          {
-            "git_repo": "${{ variables.Build.Repository.Name }}",
-            "git_branch": "${{ variables.Build.SourceBranch }}", 
-            "git_sha": "${{ variables.Build.SourceVersion }}"
-          }
+  - task: PowerShell@2
+    condition: and(succeeded(), eq(parameters['compileTasksServiceConnection'], ''))
+    inputs:
+      targetType: 'filePath'
+      scriptPath: "$(Build.SourcesDirectory)/build.ps1"
+      arguments: >
+        -Configuration $(BuildConfiguration)
+        -BuildRepositoryUri $(Build.Repository.Uri)
+        -SourcesDir $(Build.SourcesDirectory)
+        -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
+        -LogLevel $(BuildScriptLogLevel)
+        -Tasks ${{ parameters.compileTasks }}
+      pwsh: true
+    name: RunCompile
+    displayName: 'Build Solution'
+    env:
+      BUILDVAR_PublishCovenantOutputToStorage: 'False'
+      BUILDVAR_CovenantMetadata: >
+        {
+          "git_repo": "${{ variables.Build.Repository.Name }}",
+          "git_branch": "${{ variables.Build.SourceBranch }}",
+          "git_sha": "${{ variables.Build.SourceVersion }}"
+        }
+
+  - task: AzureCLI@2
+    condition: and(succeeded(), ne(parameters['compileTasksServiceConnection'], ''))
+    inputs:
+      azureSubscription: ${{ parameters.compileTasksServiceConnection }}
+      scriptType: pscore
+      scriptLocation: scriptPath
+      scriptPath: "$(Build.SourcesDirectory)/build.ps1"
+      arguments: >
+        -Configuration $(BuildConfiguration)
+        -BuildRepositoryUri $(Build.Repository.Uri)
+        -SourcesDir $(Build.SourcesDirectory)
+        -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
+        -LogLevel $(BuildScriptLogLevel)
+        -Tasks ${{ parameters.compileTasks }}
+    name: RunCompile_with_AzAuth
+    displayName: 'Build Solution'
+    env:
+      BUILDVAR_AnalysisOutputStorageAccountName: endsynapsedatalake
+      BUILDVAR_AnalysisOutputContainerName: data
+      BUILDVAR_AnalysisOutputBlobPath: openchain/covenant/raw
+      BUILDVAR_PublishCovenantOutputToStorage: 'True'
+      BUILDVAR_CovenantMetadata: >
+        {
+          "git_repo": "${{ variables.Build.Repository.Name }}",
+          "git_branch": "${{ variables.Build.SourceBranch }}", 
+          "git_sha": "${{ variables.Build.SourceVersion }}"
+        }
 
   # Scripted build 0.1.0 sets all the GitVersion outputs into environment variables with a
   # GITVERSION_ prefix, but currently, due to this bug:
@@ -155,6 +156,7 @@ jobs:
   # We're giving them an Endjin_ prefix here so we've got a stable name to refer to them by
   # elsewhere in the script, so that if the scripted build is updated to reinstate the GITVERSION_
   # prefix for these build variables, we only have to change them in one place.
+  
   - powershell: |
       Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$(-not ([string]::IsNullOrEmpty($Env:SemVer)))"
       Write-Host "##vso[task.setvariable variable=Endjin_PreReleaseTag]$Env:PreReleaseTag"
