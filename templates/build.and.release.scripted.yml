@@ -111,6 +111,7 @@ jobs:
     name: RunCompile
     displayName: 'Build Solution (no auth)'
     env:
+      NUGET_PACKAGES: $(Build.SourcesDirectory)/.nuget-packages
       BUILDVAR_PublishCovenantOutputToStorage: 'False'
       BUILDVAR_CovenantMetadata: >
         {
@@ -136,6 +137,7 @@ jobs:
     name: RunCompile_with_AzAuth
     displayName: 'Build Solution (with auth)'
     env:
+      NUGET_PACKAGES: $(Build.SourcesDirectory)/.nuget-packages
       BUILDVAR_AnalysisOutputStorageAccountName: endsynapsedatalake
       BUILDVAR_AnalysisOutputContainerName: data
       BUILDVAR_AnalysisOutputBlobPath: openchain/covenant/raw
@@ -215,6 +217,7 @@ jobs:
     name: RunTests
     displayName: 'Run Tests'
     env:
+      NUGET_PACKAGES: $(Build.SourcesDirectory)/.nuget-packages
       SYSTEM_ACCESSTOKEN: $(System.AccessToken)     # required by the custom test logger
 
   # # Scripted build (V0.1.0) currently doesn't do this for us.
@@ -271,6 +274,8 @@ jobs:
       pwsh: true
     name: RunPackage
     displayName: 'Build Packages'
+    env:
+      NUGET_PACKAGES: $(Build.SourcesDirectory)/.nuget-packages
 
   - ${{ parameters.preCopyNugetPackages }}
 
