@@ -96,7 +96,7 @@ jobs:
     displayName: 'Print Environment Variables'
 
   - task: PowerShell@2
-    condition: and(succeeded(), eq(parameters['compileTasksServiceConnection'], ''))
+    condition: and(succeeded(), ne('${{ parameters.compileTasksServiceConnection }}', ''))
     inputs:
       targetType: 'filePath'
       scriptPath: "$(Build.SourcesDirectory)/build.ps1"
@@ -120,7 +120,7 @@ jobs:
         }
 
   - task: AzureCLI@2
-    condition: and(succeeded(), ne(parameters['compileTasksServiceConnection'], ''))
+    condition: and(succeeded(), ne('${{ parameters.compileTasksServiceConnection }}', ''))
     inputs:
       azureSubscription: ${{ parameters.compileTasksServiceConnection }}
       scriptType: pscore
