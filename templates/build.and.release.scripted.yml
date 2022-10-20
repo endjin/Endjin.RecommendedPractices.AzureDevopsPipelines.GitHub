@@ -51,6 +51,8 @@ jobs:
 
     # We have dependencies on the following Environment Variables:
     # BUILD_REPOSITORY_NAME
+    # BUILD_REPOSITORY_PROVIDER
+    # SYSTEM_COLLECTIONURI
 
     # We have dependencies on the following Build Variables:
     # Endjin_Service_Connection_NuGet_Org
