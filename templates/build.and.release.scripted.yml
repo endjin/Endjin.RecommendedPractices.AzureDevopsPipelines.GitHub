@@ -59,10 +59,6 @@ jobs:
     # Endjin.ForcePublish
   steps:
   - powershell: |
-      Write-Host "BUILD_REPOSITORY_PROVIDER: $($env:BUILD_REPOSITORY_PROVIDER)"
-      Write-Host "BUILD_REPOSITORY_NAME: $($env:BUILD_REPOSITORY_NAME)"
-      Write-Host "SYSTEM_COLLECTIONURI: $($env:SYSTEM_COLLECTIONURI)"
-
       if ($env:BUILD_REPOSITORY_PROVIDER -eq "GitHub") {
         $orgName = ($env:BUILD_REPOSITORY_NAME -split "/")[0]
         $repoName = ($env:BUILD_REPOSITORY_NAME -split "/")[1]
