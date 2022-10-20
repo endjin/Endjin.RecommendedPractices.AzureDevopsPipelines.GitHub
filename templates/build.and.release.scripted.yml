@@ -47,14 +47,6 @@ jobs:
     DOTNET_CLI_TELEMETRY_OPTOUT: 1
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
     PackagesOutputDirName: '_packages'
-    ${{ if eq(variables['BUILD_REPOSITORY_PROVIDER'], 'GitHub') }}:
-      GitPlatform: 'GitHub'
-      GitOrg: ${{ split(variables['BUILD_REPOSITORY_NAME'], '/')[0] }}
-      GitRepo: ${{ split(variables['BUILD_REPOSITORY_NAME'], '/')[1] }}
-    ${{ else }}:
-      GitPlatform: 'Azure'
-      GitOrg: ${{ split(variables['SYSTEM_COLLECTIONURI'], '/')[3] }}
-      GitRepo: ${{ variables['BUILD_REPOSITORY_NAME'] }}
 
 
     # We have dependencies on the following Environment Variables:
@@ -70,20 +62,25 @@ jobs:
       Write-Host "BUILD_REPOSITORY_PROVIDER: $($env:BUILD_REPOSITORY_PROVIDER)"
       Write-Host "BUILD_REPOSITORY_NAME: $($env:BUILD_REPOSITORY_NAME)"
       Write-Host "SYSTEM_COLLECTIONURI: $($env:SYSTEM_COLLECTIONURI)"
-      Write-Host "GitPlatform: $($env:GitPlatform)"
-      Write-Host "OrgName: $($env:OrgName)"
-      Write-Host "RepoName: $($env:RepoName)"
-      Write-Host "OrgSplit: $($env:OrgSplit)"
-      Write-Host "RepoSplit: $($env:RepoSplit)"
+
+      if ($env:BUILD_REPOSITORY_PROVIDER -eq "GitHub") {
+        $orgName = ($env:BUILD_REPOSITORY_NAME -split "/")[0]
+        $repoName = ($env:BUILD_REPOSITORY_NAME -split "/")[1]
+      }
+      else {
+        $orgName = ($env:SYSTEM_COLLECTIONURI -split "/")[3]
+        $repoName = $env:BUILD_REPOSITORY_NAME
+      }
+      
+      Write-Host "##vso[task.setvariable variable=Endjin_GitPlatform]$($env:BUILD_REPOSITORY_PROVIDER.ToLower())"
+      Write-Host "##vso[task.setvariable variable=Endjin_GitOrgName]$orgName"
+      Write-Host "##vso[task.setvariable variable=Endjin_GitRepoName]$repoName"
+    name: GitRepoMetadata
+    displayName: 'Set Git Metadata Variables'
     env:
       BUILD_REPOSITORY_PROVIDER: $(BUILD_REPOSITORY_PROVIDER)
       BUILD_REPOSITORY_NAME: $(BUILD_REPOSITORY_NAME)
       SYSTEM_COLLECTIONURI: $(SYSTEM_COLLECTIONURI)
-      GitPlatform: $(GitPlatform)
-      OrgName: $(GitOrg)
-      RepoName: $(GitRepo)
-      OrgSplit: ${{ split(variables['BUILD_REPOSITORY_NAME'], '/')[0] }}
-      RepoSplit: ${{ split(variables['BUILD_REPOSITORY_NAME'], '/')[1] }}
 
   - checkout: self
     submodules: recursive
@@ -168,13 +165,15 @@ jobs:
       NUGET_PACKAGES: $(Build.SourcesDirectory)/.nuget-packages
       BUILDVAR_AnalysisOutputStorageAccountName: endsynapsedatalake
       BUILDVAR_AnalysisOutputContainerName: data
-      BUILDVAR_AnalysisOutputBlobPath: openchain/covenant/raw/org=$(GitOrg)/repo=$(GitRepo)
+      BUILDVAR_AnalysisOutputBlobPath: openchain/covenant/raw/platform=$(GitRepoMetadata.Endjin_GitPlatform)/org=$(GitRepoMetadata.Endjin_GitOrgName)/repo=$(GitRepoMetadata.Endjin_GitRepoName)
       BUILDVAR_PublishCovenantOutputToStorage: 'True'
       BUILDVAR_CovenantMetadata: >
         {
-          "git_repo": "${{ variables.Build.Repository.Name }}",
-          "git_branch": "${{ variables.Build.SourceBranch }}", 
-          "git_sha": "${{ variables.Build.SourceVersion }}"
+          "git_provider": "$(GitRepoMetadata.Endjin_GitPlatform)",
+          "git_org": "$(GitRepoMetadata.Endjin_GitOrgName)",
+          "git_repo": "$(GitRepoMetadata.Endjin_GitRepoName)",
+          "git_branch": "${{ variables['Build.SourceBranch'] }}", 
+          "git_sha": "${{ variables['Build.SourceVersion'] }}"
         }
 
   # ref: https://marketplace.visualstudio.com/items?itemName=LakshayKaushik.PublishHTMLReports
