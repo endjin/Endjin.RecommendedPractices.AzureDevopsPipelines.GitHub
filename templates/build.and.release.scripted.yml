@@ -73,6 +73,8 @@ jobs:
       Write-Host "GitPlatform: $($env:GitPlatform)"
       Write-Host "OrgName: $($env:OrgName)"
       Write-Host "RepoName: $($env:RepoName)"
+      Write-Host "OrgSplit: $($env:OrgSplit)"
+      Write-Host "RepoSplit: $($env:RepoSplit)"
     env:
       BUILD_REPOSITORY_PROVIDER: $(BUILD_REPOSITORY_PROVIDER)
       BUILD_REPOSITORY_NAME: $(BUILD_REPOSITORY_NAME)
@@ -80,6 +82,8 @@ jobs:
       GitPlatform: $(GitPlatform)
       OrgName: $(GitOrg)
       RepoName: $(GitRepo)
+      OrgSplit: ${{ split(variables['BUILD_REPOSITORY_NAME'], '/')[0] }}
+      RepoSplit: ${{ split(variables['BUILD_REPOSITORY_NAME'], '/')[1] }}
 
   - checkout: self
     submodules: recursive
