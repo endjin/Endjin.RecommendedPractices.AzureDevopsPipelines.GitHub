@@ -48,11 +48,13 @@ jobs:
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
     PackagesOutputDirName: '_packages'
     ${{ if eq(variables['BUILD_REPOSITORY_PROVIDER'], 'GitHub') }}:
+      GitPlatform: 'GitHub'
       GitOrg: ${{ split(variables['BUILD_REPOSITORY_NAME'], '/')[0] }}
       GitRepo: ${{ split(variables['BUILD_REPOSITORY_NAME'], '/')[1] }}
     ${{ else }}:
+      GitPlatform: 'Azure'
       GitOrg: ${{ split(variables['SYSTEM_COLLECTIONURI'], '/')[3] }}
-      GitRepo: $(BUILD_REPOSITORY_NAME)
+      GitRepo: ${{ variables['BUILD_REPOSITORY_NAME'] }}
 
 
     # We have dependencies on the following Environment Variables:
@@ -64,15 +66,21 @@ jobs:
     # Endjin_Slack_ReleasesWebhookUri
     # Endjin.ForcePublish
   steps:
-  - checkout: self
-    submodules: recursive
-
   - powershell: |
+      Write-Host "BUILD_REPOSITORY_NAME: $($env:BUILD_REPOSITORY_NAME)"
+      Write-Host "SYSTEM_COLLECTIONURI: $($env:SYSTEM_COLLECTIONURI)"
+      Write-Host "GitPlatform: $($env:GitPlatform)"
       Write-Host "OrgName: $($env:OrgName)"
       Write-Host "RepoName: $($env:RepoName)"
     env:
+      BUILD_REPOSITORY_NAME: $(BUILD_REPOSITORY_NAME)
+      SYSTEM_COLLECTIONURI: $(SYSTEM_COLLECTIONURI)
+      GitPlatform: $(GitPlatform)
       OrgName: $(GitOrg)
       RepoName: $(GitRepo)
+
+  - checkout: self
+    submodules: recursive
 
   - task: UseDotNet@2
     displayName: 'Install .NET SDK ${{ parameters.netSdkVersion }}'
