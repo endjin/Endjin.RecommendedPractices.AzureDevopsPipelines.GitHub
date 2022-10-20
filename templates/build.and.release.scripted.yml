@@ -163,7 +163,7 @@ jobs:
       NUGET_PACKAGES: $(Build.SourcesDirectory)/.nuget-packages
       BUILDVAR_AnalysisOutputStorageAccountName: endsynapsedatalake
       BUILDVAR_AnalysisOutputContainerName: data
-      BUILDVAR_AnalysisOutputBlobPath: openchain/covenant/raw/platform=$(GitRepoMetadata.Endjin_GitPlatform)/org=$(GitRepoMetadata.Endjin_GitOrgName)/repo=$(GitRepoMetadata.Endjin_GitRepoName)
+      BUILDVAR_AnalysisOutputBlobPath: openchain/covenant/raw/src_platform=$(GitRepoMetadata.Endjin_GitPlatform)/org=$(GitRepoMetadata.Endjin_GitOrgName)/repo=$(GitRepoMetadata.Endjin_GitRepoName)
       BUILDVAR_PublishCovenantOutputToStorage: 'True'
       BUILDVAR_CovenantMetadata: >
         {
