@@ -154,7 +154,10 @@ jobs:
     displayName: 'Publish SBOM Report'
     inputs:
       htmlType: 'genericHTML'
-      htmlPath: '$(RunCompile.SbomHtmlReportPath)'
+      ${{ if eq(parameters.compileTasksServiceConnection, '') }}:
+        htmlPath: '$(RunCompile.SbomHtmlReportPath)'
+      ${{ else }}:
+        htmlPath: '$(RunCompile_with_AzAuth.SbomHtmlReportPath)'
 
   - task: PublishPipelineArtifact@1
     inputs:
