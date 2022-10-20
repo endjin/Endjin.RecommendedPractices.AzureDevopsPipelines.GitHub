@@ -71,6 +71,10 @@ jobs:
         $orgName = ($env:SYSTEM_COLLECTIONURI -split "/")[3]
         $repoName = $env:BUILD_REPOSITORY_NAME
       }
+
+      Write-Host "Endjin_GitPlatform: $($env:BUILD_REPOSITORY_PROVIDER.ToLower())"
+      Write-Host "Endjin_GitOrgName: $orgName"
+      Write-Host "Endjin_GitRepoName: $repoName"
       
       Write-Host "##vso[task.setvariable variable=Endjin_GitPlatform]$($env:BUILD_REPOSITORY_PROVIDER.ToLower())"
       Write-Host "##vso[task.setvariable variable=Endjin_GitOrgName]$orgName"
@@ -165,7 +169,7 @@ jobs:
       NUGET_PACKAGES: $(Build.SourcesDirectory)/.nuget-packages
       BUILDVAR_AnalysisOutputStorageAccountName: endsynapsedatalake
       BUILDVAR_AnalysisOutputContainerName: data
-      BUILDVAR_AnalysisOutputBlobPath: openchain/covenant/raw/platform=$(GitRepoMetadata.Endjin_GitPlatform)/org=$(GitRepoMetadata.Endjin_GitOrgName)/repo=$(GitRepoMetadata.Endjin_GitRepoName)
+      BUILDVAR_AnalysisOutputBlobPath: openchain/covenant/raw/platform=${{ variables['GitRepoMetadata.Endjin_GitPlatform'] }}/org=$(GitRepoMetadata.Endjin_GitOrgName)/repo=$(GitRepoMetadata.Endjin_GitRepoName)
       BUILDVAR_PublishCovenantOutputToStorage: 'True'
       BUILDVAR_CovenantMetadata: >
         {
