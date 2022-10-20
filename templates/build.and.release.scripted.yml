@@ -67,7 +67,7 @@ jobs:
     # Endjin.ForcePublish
   steps:
   - powershell: |
-      Write-Host "BUILD_REPOSITORY_PROVIDER: $(env:BUILD_REPOSITORY_PROVIDER)"
+      Write-Host "BUILD_REPOSITORY_PROVIDER: $($env:BUILD_REPOSITORY_PROVIDER)"
       Write-Host "BUILD_REPOSITORY_NAME: $($env:BUILD_REPOSITORY_NAME)"
       Write-Host "SYSTEM_COLLECTIONURI: $($env:SYSTEM_COLLECTIONURI)"
       Write-Host "GitPlatform: $($env:GitPlatform)"
