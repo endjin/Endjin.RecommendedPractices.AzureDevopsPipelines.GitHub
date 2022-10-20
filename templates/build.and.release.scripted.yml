@@ -49,11 +49,11 @@ jobs:
     PackagesOutputDirName: '_packages'
     ${{ if eq(variables['BUILD_REPOSITORY_PROVIDER'], 'GitHub') }}:
       GitPlatform: 'GitHub'
-      GitOrg: ${{ (split(variables['BUILD_REPOSITORY_NAME'], '/'))[0] }}
-      GitRepo: ${{ (split(variables['BUILD_REPOSITORY_NAME'], '/'))[1] }}
+      GitOrg: ${{ split(variables['BUILD_REPOSITORY_NAME'], '/')[0] }}
+      GitRepo: ${{ split(variables['BUILD_REPOSITORY_NAME'], '/')[1] }}
     ${{ else }}:
       GitPlatform: 'Azure'
-      GitOrg: ${{ (split(variables['SYSTEM_COLLECTIONURI'], '/'))[3] }}
+      GitOrg: ${{ split(variables['SYSTEM_COLLECTIONURI'], '/')[3] }}
       GitRepo: ${{ variables['BUILD_REPOSITORY_NAME'] }}
 
 
