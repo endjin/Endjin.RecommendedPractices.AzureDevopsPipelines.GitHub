@@ -31,7 +31,7 @@ parameters:
   compileTasks: 'Build,Analysis'
   testTasks: 'Test,TestReport'
   packageTasks: 'Package'
-  analysisOutputSasToken: ''
+  compileTasksServiceConnection: ''
 
 jobs:
 - job: Build
@@ -48,8 +48,11 @@ jobs:
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
     PackagesOutputDirName: '_packages'
 
+
     # We have dependencies on the following Environment Variables:
     # BUILD_REPOSITORY_NAME
+    # BUILD_REPOSITORY_PROVIDER
+    # SYSTEM_COLLECTIONURI
 
     # We have dependencies on the following Build Variables:
     # Endjin_Service_Connection_NuGet_Org
@@ -57,6 +60,26 @@ jobs:
     # Endjin_Slack_ReleasesWebhookUri
     # Endjin.ForcePublish
   steps:
+  - powershell: |
+      if ($env:BUILD_REPOSITORY_PROVIDER -eq "GitHub") {
+        $orgName = ($env:BUILD_REPOSITORY_NAME -split "/")[0]
+        $repoName = ($env:BUILD_REPOSITORY_NAME -split "/")[1]
+      }
+      else {
+        $orgName = ($env:SYSTEM_COLLECTIONURI -split "/")[3]
+        $repoName = $env:BUILD_REPOSITORY_NAME
+      }
+
+      Write-Host "##vso[task.setvariable variable=Endjin_GitPlatform;isoutput=true]$($env:BUILD_REPOSITORY_PROVIDER.ToLower())"
+      Write-Host "##vso[task.setvariable variable=Endjin_GitOrgName;isoutput=true]$orgName"
+      Write-Host "##vso[task.setvariable variable=Endjin_GitRepoName;isoutput=true]$repoName"
+    name: GitRepoMetadata
+    displayName: 'Set Git Metadata Variables'
+    env:
+      BUILD_REPOSITORY_PROVIDER: $(BUILD_REPOSITORY_PROVIDER)
+      BUILD_REPOSITORY_NAME: $(BUILD_REPOSITORY_NAME)
+      SYSTEM_COLLECTIONURI: $(SYSTEM_COLLECTIONURI)
+
   - checkout: self
     submodules: recursive
 
@@ -96,9 +119,10 @@ jobs:
     displayName: 'Print Environment Variables'
 
   - task: PowerShell@2
+    condition: and(succeeded(), eq('${{ parameters.compileTasksServiceConnection }}', ''))
     inputs:
-      targetType: 'filePath'
-      filePath: "$(Build.SourcesDirectory)/build.ps1"
+      targetType: filePath
+      filePath: $(Build.SourcesDirectory)/build.ps1
       arguments: >
         -Configuration $(BuildConfiguration)
         -BuildRepositoryUri $(Build.Repository.Uri)
@@ -108,38 +132,85 @@ jobs:
         -Tasks ${{ parameters.compileTasks }}
       pwsh: true
     name: RunCompile
-    displayName: 'Build Solution'
+    displayName: 'Build Solution (no auth)'
     env:
+      NUGET_PACKAGES: $(Build.SourcesDirectory)/.nuget-packages
+      BUILDVAR_PublishCovenantOutputToStorage: 'False'
+      BUILDVAR_CovenantMetadata: >
+        {
+          "git_repo": "${{ variables.Build.Repository.Name }}",
+          "git_branch": "${{ variables.Build.SourceBranch }}",
+          "git_sha": "${{ variables.Build.SourceVersion }}"
+        }
+
+  - task: AzureCLI@2
+    condition: and(succeeded(), ne('${{ parameters.compileTasksServiceConnection }}', ''))
+    inputs:
+      azureSubscription: ${{ parameters.compileTasksServiceConnection }}
+      scriptType: pscore
+      scriptLocation: scriptPath
+      scriptPath: $(Build.SourcesDirectory)/build.ps1
+      arguments: >
+        -Configuration $(BuildConfiguration)
+        -BuildRepositoryUri $(Build.Repository.Uri)
+        -SourcesDir $(Build.SourcesDirectory)
+        -CoverageDir $(Build.SourcesDirectory)/CodeCoverage
+        -LogLevel $(BuildScriptLogLevel)
+        -Tasks ${{ parameters.compileTasks }}
+    name: RunCompile_with_AzAuth
+    displayName: 'Build Solution (with auth)'
+    env:
+      NUGET_PACKAGES: $(Build.SourcesDirectory)/.nuget-packages
       BUILDVAR_AnalysisOutputStorageAccountName: endsynapsedatalake
       BUILDVAR_AnalysisOutputContainerName: data
-      BUILDVAR_AnalysisOutputBlobPath: openchain/hades/raw
-      BUILDVAR_AnalysisOutputSasToken: ${{ parameters.analysisOutputSasToken }}
-
-  # Scripted build 0.1.0 sets all the GitVersion outputs into environment variables with a
-  # GITVERSION_ prefix, but currently, due to this bug:
-  #  https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
-  # when it emits them as Build Variables, it does not include the prefix. Environment variable
-  # set by the build script are only available while the build script runs, so it's the build
-  # variables we have to depend on here.
-  # We're giving them an Endjin_ prefix here so we've got a stable name to refer to them by
-  # elsewhere in the script, so that if the scripted build is updated to reinstate the GITVERSION_
-  # prefix for these build variables, we only have to change them in one place.
-  - powershell: |
-      Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$(-not ([string]::IsNullOrEmpty($Env:SemVer)))"
-      Write-Host "##vso[task.setvariable variable=Endjin_PreReleaseTag]$Env:PreReleaseTag"
-      Write-Host "##vso[task.setvariable variable=Endjin_SemVer]$Env:SemVer"
-    displayName: 'Set Version Information Build Variables'
-    env:
-      PreReleaseTag: $(PreReleaseTag)
-      SemVer: $(SemVer)
+      BUILDVAR_AnalysisOutputBlobPath: openchain/covenant/raw/src_platform=$(GitRepoMetadata.Endjin_GitPlatform)/org=$(GitRepoMetadata.Endjin_GitOrgName)/repo=$(GitRepoMetadata.Endjin_GitRepoName)
+      BUILDVAR_PublishCovenantOutputToStorage: 'True'
+      BUILDVAR_CovenantMetadata: >
+        {
+          "git_provider": "$(GitRepoMetadata.Endjin_GitPlatform)",
+          "git_org": "$(GitRepoMetadata.Endjin_GitOrgName)",
+          "git_repo": "$(GitRepoMetadata.Endjin_GitRepoName)",
+          "git_branch": "${{ variables['Build.SourceBranch'] }}", 
+          "git_sha": "${{ variables['Build.SourceVersion'] }}"
+        }
 
   # ref: https://marketplace.visualstudio.com/items?itemName=LakshayKaushik.PublishHTMLReports
   - task: publishhtmlreport@1
     displayName: 'Publish SBOM Report'
     inputs:
       htmlType: 'genericHTML'
-      htmlPath: '$(RunCompile.SbomHtmlReportPath)'
+      ${{ if eq(parameters.compileTasksServiceConnection, '') }}:
+        htmlPath: '$(RunCompile.SbomHtmlReportPath)'
+      ${{ else }}:
+        htmlPath: '$(RunCompile_with_AzAuth.SbomHtmlReportPath)'
 
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: '$(Build.SourcesDirectory)'
+      artifactType: 'pipeline'
+      artifactName: 'build'
+
+
+- job: Test
+  dependsOn: Build
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+
+  variables:
+    BuildConfiguration: 'Release'
+    ${{ if or(variables['Endjin.BuildDiagnostics'], variables['Endjin.ShowEnvironment']) }}:
+      BuildScriptLogLevel: 'detailed'
+    ${{ else }}:
+      BuildScriptLogLevel: 'minimal'
+    DOTNET_CLI_TELEMETRY_OPTOUT: 1
+    DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+    PackagesOutputDirName: '_packages'
+  steps:
+  - task: DownloadPipelineArtifact@2
+    inputs:
+      buildType: 'current'
+      artifactName: build
+      targetPath: $(Build.SourcesDirectory)
   - task: PowerShell@2
     inputs:
       targetType: 'filePath'
@@ -155,8 +226,8 @@ jobs:
     name: RunTests
     displayName: 'Run Tests'
     env:
-      BUILDVAR_DotNetTestLogger: AzurePipelines
-      SYSTEM_ACCESSTOKEN: $(System.AccessToken)     # required by the above custom logger
+      NUGET_PACKAGES: $(Build.SourcesDirectory)/.nuget-packages
+      SYSTEM_ACCESSTOKEN: $(System.AccessToken)     # required by the custom test logger
 
   # # Scripted build (V0.1.0) currently doesn't do this for us.
   # - powershell: |
@@ -176,6 +247,28 @@ jobs:
 
   - ${{ parameters.postPublishCodeCoverageReport }}
 
+
+- job: Package
+  dependsOn: Test
+  pool:
+    vmImage: ${{ parameters.vmImage }}
+
+  variables:
+    BuildConfiguration: 'Release'
+    ${{ if or(variables['Endjin.BuildDiagnostics'], variables['Endjin.ShowEnvironment']) }}:
+      BuildScriptLogLevel: 'detailed'
+    ${{ else }}:
+      BuildScriptLogLevel: 'minimal'
+    DOTNET_CLI_TELEMETRY_OPTOUT: 1
+    DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+    PackagesOutputDirName: '_packages'
+  steps:
+  - checkout: self    # ensure we have a git reference to support later tasks
+  - task: DownloadPipelineArtifact@2
+    inputs:
+      buildType: 'current'
+      artifactName: build
+      targetPath: $(Build.SourcesDirectory)
   - task: PowerShell@2
     inputs:
       targetType: 'filePath'
@@ -191,6 +284,27 @@ jobs:
       pwsh: true
     name: RunPackage
     displayName: 'Build Packages'
+    env:
+      NUGET_PACKAGES: $(Build.SourcesDirectory)/.nuget-packages
+
+  # Scripted build 0.1.0 sets all the GitVersion outputs into environment variables with a
+  # GITVERSION_ prefix, but currently, due to this bug:
+  #  https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
+  # when it emits them as Build Variables, it does not include the prefix. Environment variable
+  # set by the build script are only available while the build script runs, so it's the build
+  # variables we have to depend on here.
+  # We're giving them an Endjin_ prefix here so we've got a stable name to refer to them by
+  # elsewhere in the script, so that if the scripted build is updated to reinstate the GITVERSION_
+  # prefix for these build variables, we only have to change them in one place.
+  
+  - powershell: |
+      Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$(-not ([string]::IsNullOrEmpty($Env:SemVer)))"
+      Write-Host "##vso[task.setvariable variable=Endjin_PreReleaseTag]$Env:PreReleaseTag"
+      Write-Host "##vso[task.setvariable variable=Endjin_SemVer]$Env:SemVer"
+    displayName: 'Set Version Information Build Variables'
+    env:
+      PreReleaseTag: $(PreReleaseTag)
+      SemVer: $(SemVer)
 
   - ${{ parameters.preCopyNugetPackages }}
 
