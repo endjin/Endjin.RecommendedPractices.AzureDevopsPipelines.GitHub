@@ -83,22 +83,11 @@ jobs:
   - checkout: self
     submodules: recursive
 
-  - task: UseDotNet@2
-    displayName: 'Install .NET SDK ${{ parameters.netSdkVersion }}'
-    inputs:
-      packageType: sdk
-      version: ${{ parameters.netSdkVersion }}
-      includePreviewVersions: ${{ parameters.includeNetSdkPreviewVersions }}
-      installationPath: $(Agent.ToolsDirectory)/dotnet
-
-  - ${{ each sdkVersion in parameters.additionalNetSdkVersions }}:
-    - task: UseDotNet@2
-      displayName: 'Install .NET SDK ${{ sdkVersion }}'
-      inputs:
-        packageType: sdk
-        version: ${{ sdkVersion }}
-        includePreviewVersions: ${{ parameters.includeNetSdkPreviewVersions }}
-        installationPath: $(Agent.ToolsDirectory)/dotnet
+  - template: install-dotnet-sdks.yml
+    parameters:
+      netSdkVersion: ${{ parameters.netSdkVersion }}
+      additionalNetSdkVersions: ${{ parameters.additionalNetSdkVersions }}
+      includeNetSdkPreviewVersions: ${{ parameters.includeNetSdkPreviewVersions }}
 
   - ${{ parameters.preCustomEnvironmentVariables }}
 
@@ -202,6 +191,11 @@ jobs:
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
     PackagesOutputDirName: '_packages'
   steps:
+  - template: install-dotnet-sdks.yml
+    parameters:
+      netSdkVersion: ${{ parameters.netSdkVersion }}
+      additionalNetSdkVersions: ${{ parameters.additionalNetSdkVersions }}
+      includeNetSdkPreviewVersions: ${{ parameters.includeNetSdkPreviewVersions }}
   - task: DownloadPipelineArtifact@2
     inputs:
       buildType: 'current'
@@ -253,6 +247,11 @@ jobs:
     PackagesOutputDirName: '_packages'
   steps:
   - checkout: self    # ensure we have a git reference to support later tasks
+  - template: install-dotnet-sdks.yml
+    parameters:
+      netSdkVersion: ${{ parameters.netSdkVersion }}
+      additionalNetSdkVersions: ${{ parameters.additionalNetSdkVersions }}
+      includeNetSdkPreviewVersions: ${{ parameters.includeNetSdkPreviewVersions }}
   - task: DownloadPipelineArtifact@2
     inputs:
       buildType: 'current'
