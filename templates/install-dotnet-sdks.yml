@@ -1,0 +1,23 @@
+parameters:
+  netSdkVersion: '6.x'
+  additionalNetSdkVersions: []
+  includeNetSdkPreviewVersions: 'false'
+
+steps:
+
+- task: UseDotNet@2
+  displayName: 'Install .NET SDK ${{ parameters.netSdkVersion }}'
+  inputs:
+    packageType: sdk
+    version: ${{ parameters.netSdkVersion }}
+    includePreviewVersions: ${{ parameters.includeNetSdkPreviewVersions }}
+    installationPath: $(Agent.ToolsDirectory)/dotnet
+
+- ${{ each sdkVersion in parameters.additionalNetSdkVersions }}:
+  - task: UseDotNet@2
+    displayName: 'Install .NET SDK ${{ sdkVersion }}'
+    inputs:
+      packageType: sdk
+      version: ${{ sdkVersion }}
+      includePreviewVersions: ${{ parameters.includeNetSdkPreviewVersions }}
+      installationPath: $(Agent.ToolsDirectory)/dotnet
