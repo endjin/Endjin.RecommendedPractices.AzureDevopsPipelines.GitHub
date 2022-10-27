@@ -102,10 +102,6 @@ jobs:
 
   - ${{ parameters.preCustomEnvironmentVariables }}
 
-  - powershell: |
-      Write-Host "##vso[task.setvariable variable=Endjin_Repository_Name]$Env:BUILD_REPOSITORY_NAME"
-    displayName: 'Set Build Variables from Environment'
-
   - ${{ parameters.postCustomEnvironmentVariables }}
 
   - powershell: |
@@ -229,13 +225,6 @@ jobs:
       NUGET_PACKAGES: $(Build.SourcesDirectory)/.nuget-packages
       SYSTEM_ACCESSTOKEN: $(System.AccessToken)     # required by the custom test logger
 
-  # # Scripted build (V0.1.0) currently doesn't do this for us.
-  # - powershell: |
-  #     Write-Host "##vso[build.updatebuildnumber]$($Env:GitVersion_SemVer)"
-  #   displayName: 'Set Build Number'
-  #   env:
-  #     GitVersion_SemVer: $(Endjin_SemVer)
-
   - ${{ parameters.prePublishCodeCoverageReport }}
 
   - task: PublishCodeCoverageResults@1
@@ -334,10 +323,13 @@ jobs:
   - ${{ parameters.preCreateGitHubRelease }}
 
   - pwsh: |
+      Write-Host "Repository Name: '$($env:BUILD_REPOSITORY_NAME)'"
+      Write-Host "Endjin_SemVer: '$($env:Endjin_SemVer)'"
       Write-Host "Endjin.ForcePublish: '$($env:Endjin_ForcePublish)'"
       Write-Host "Endjin_PreReleaseTag: '$($env:Endjin_PreReleaseTag)'"
     displayName: Debug release condition parameters
     env:
+      Endjin_SemVer: $(Endjin_SemVer)
       Endjin_ForcePublish: $(Endjin.ForcePublish)
       Endjin_PreReleaseTag: $(Endjin_PreReleaseTag)
 
@@ -346,7 +338,7 @@ jobs:
     condition: and(succeeded(), or(eq(variables['Endjin.ForcePublish'], 'true'), eq(variables['Endjin_PreReleaseTag'], '')))
     inputs:
       gitHubConnection: ${{ parameters.service_connection_github }}
-      repositoryName: $(Endjin_Repository_Name)
+      repositoryName: $(Build.Repository.Name)
       tagSource: userSpecifiedTag
       tag: $(Endjin_SemVer)
       isPreRelease: $(Endjin_IsPreRelease)
@@ -404,7 +396,7 @@ jobs:
     displayName: Send notification to Slack channel
     env:
       Endjin_Slack_ReleasesWebhookUri: $(Endjin_Slack_ReleasesWebhookUri)
-      Endjin_Repository_Name: $(Endjin_Repository_Name)
+      Endjin_Repository_Name: $(Build.Repository.Name)
       GitVersion_SemVer: $(Endjin_SemVer)
       Build_ArtifactStagingDirectory: $(Build.ArtifactStagingDirectory)
       BuildPackagesOutputDirName: $(PackagesOutputDirName)
