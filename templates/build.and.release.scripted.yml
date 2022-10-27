@@ -347,7 +347,7 @@ jobs:
     inputs:
       gitHubConnection: ${{ parameters.service_connection_github }}
       repositoryName: $(Endjin_Repository_Name)
-      tagSource: manual
+      tagSource: userSpecified
       tag: $(Endjin_SemVer)
       isPreRelease: $(Endjin_IsPreRelease)
       assets: |
