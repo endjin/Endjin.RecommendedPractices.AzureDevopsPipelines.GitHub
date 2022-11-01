@@ -123,9 +123,11 @@ jobs:
       BUILDVAR_PublishCovenantOutputToStorage: 'False'
       BUILDVAR_CovenantMetadata: >
         {
-          "git_repo": "${{ variables.Build.Repository.Name }}",
-          "git_branch": "${{ variables.Build.SourceBranch }}",
-          "git_sha": "${{ variables.Build.SourceVersion }}"
+          "git_provider": "$(GitRepoMetadata.Endjin_GitPlatform)",
+          "git_org": "$(GitRepoMetadata.Endjin_GitOrgName)",
+          "git_repo": "$(GitRepoMetadata.Endjin_GitRepoName)",
+          "git_branch": "${{ variables['Build.SourceBranch'] }}", 
+          "git_sha": "${{ variables['Build.SourceVersion'] }}"
         }
 
   - task: AzureCLI@2
