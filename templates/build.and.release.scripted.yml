@@ -203,6 +203,11 @@ jobs:
       buildType: 'current'
       artifactName: build
       targetPath: $(Build.SourcesDirectory)
+
+  - ${{ parameters.preCustomEnvironmentVariables }}
+
+  - ${{ parameters.postCustomEnvironmentVariables }}
+
   - task: PowerShell@2
     inputs:
       targetType: 'filePath'
@@ -259,6 +264,11 @@ jobs:
       buildType: 'current'
       artifactName: build
       targetPath: $(Build.SourcesDirectory)
+
+  - ${{ parameters.preCustomEnvironmentVariables }}
+
+  - ${{ parameters.postCustomEnvironmentVariables }}
+        
   - task: PowerShell@2
     inputs:
       targetType: 'filePath'
