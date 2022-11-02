@@ -373,55 +373,55 @@ jobs:
 
   - ${{ parameters.prePublishNugetPackages }}
 
-  - task: NuGetCommand@2
-    displayName: 'Publish to nuget.org'
-    condition: and(succeeded(), or(eq(variables['Endjin.ForcePublish'], 'true'), eq(variables['Endjin_PreReleaseTag'], '')))
-    inputs:
-      command: push
-      nuGetFeedType: external
-      publishFeedCredentials: ${{ parameters.service_connection_nuget_org }}
-      versioningScheme: byBuildNumber
-      packagesToPush: '$(Build.ArtifactStagingDirectory)/Release/**/*.nupkg'
+  # - task: NuGetCommand@2
+  #   displayName: 'Publish to nuget.org'
+  #   condition: and(succeeded(), or(eq(variables['Endjin.ForcePublish'], 'true'), eq(variables['Endjin_PreReleaseTag'], '')))
+  #   inputs:
+  #     command: push
+  #     nuGetFeedType: external
+  #     publishFeedCredentials: ${{ parameters.service_connection_nuget_org }}
+  #     versioningScheme: byBuildNumber
+  #     packagesToPush: '$(Build.ArtifactStagingDirectory)/Release/**/*.nupkg'
 
   - ${{ parameters.postPublishNugetPackages }}
 
-  - pwsh: |
-      $body = @{
-        username = "endjin-bot"
-        icon_emoji = ":mike:"
-      }
+  # - pwsh: |
+  #     $body = @{
+  #       username = "endjin-bot"
+  #       icon_emoji = ":mike:"
+  #     }
 
-      Write-Host "Build_ArtifactStagingDirectory: $($env:Build_ArtifactStagingDirectory)"
-      $packages = gci -Recurse -Filter *.nupkg -Path "$($env:Build_ArtifactStagingDirectory)/Release/NuGet/$($env:BuildPackagesOutputDirName)"
-      Write-Host $packages
+  #     Write-Host "Build_ArtifactStagingDirectory: $($env:Build_ArtifactStagingDirectory)"
+  #     $packages = gci -Recurse -Filter *.nupkg -Path "$($env:Build_ArtifactStagingDirectory)/Release/NuGet/$($env:BuildPackagesOutputDirName)"
+  #     Write-Host $packages
 
-      $blocks = @()
-      $blocks += @{ type = "header"; text = @{ type = "plain_text";  text = "New release for $($env:Endjin_Repository_Name) : $($env:GitVersion_SemVer)" } }
-      $blocks += @{ type = "section"; text = @{ type = "mrkdwn";  text = "The following packages have been published to <https://nuget.org|NuGet>:" } }
+  #     $blocks = @()
+  #     $blocks += @{ type = "header"; text = @{ type = "plain_text";  text = "New release for $($env:Endjin_Repository_Name) : $($env:GitVersion_SemVer)" } }
+  #     $blocks += @{ type = "section"; text = @{ type = "mrkdwn";  text = "The following packages have been published to <https://nuget.org|NuGet>:" } }
 
-      $packagesText = ""
+  #     $packagesText = ""
 
-      foreach ($p in $packages) {
-          $packageName = [IO.Path]::GetFileNameWithoutExtension($p.Name) -replace ".$($env:GitVersion_SemVer)",""
-          $packagesText += "•  <https://nuget.org/packages/$packageName/$($env:GitVersion_SemVer)|$packageName>`n"
-      }
+  #     foreach ($p in $packages) {
+  #         $packageName = [IO.Path]::GetFileNameWithoutExtension($p.Name) -replace ".$($env:GitVersion_SemVer)",""
+  #         $packagesText += "•  <https://nuget.org/packages/$packageName/$($env:GitVersion_SemVer)|$packageName>`n"
+  #     }
 
-      $blocks += @{ type = "section"; text = @{ type = "mrkdwn";  text = $packagesText } }
-      $blocks += @{ type = "divider" }
-      $blocks += @{ type = "section"; text = @{ type = "mrkdwn";  text = "The GitHub release can be found <https://github.com/$($env:Endjin_Repository_Name)/releases/tag/$($env:GitVersion_SemVer)|here>" } }
+  #     $blocks += @{ type = "section"; text = @{ type = "mrkdwn";  text = $packagesText } }
+  #     $blocks += @{ type = "divider" }
+  #     $blocks += @{ type = "section"; text = @{ type = "mrkdwn";  text = "The GitHub release can be found <https://github.com/$($env:Endjin_Repository_Name)/releases/tag/$($env:GitVersion_SemVer)|here>" } }
 
-      $body += @{ blocks = $blocks }
-      Write-Host "body:`n$(ConvertTo-Json $body -Depth 99)"
-      Invoke-RestMethod -uri "$($env:Endjin_Slack_ReleasesWebhookUri)" `
-                        -Method Post `
-                        -body (ConvertTo-Json $body -Depth 99) `
-                        -ContentType 'application/json'
-    condition: and(succeeded(), or(eq(variables['Endjin.ForcePublish'], 'true'), eq(variables['Endjin_PreReleaseTag'], '')), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
-    displayName: Send notification to Slack channel
-    env:
-      Endjin_Slack_ReleasesWebhookUri: $(Endjin_Slack_ReleasesWebhookUri)
-      Endjin_Repository_Name: $(Build.Repository.Name)
-      GitVersion_SemVer: $(Endjin_SemVer)
-      Build_ArtifactStagingDirectory: $(Build.ArtifactStagingDirectory)
-      BuildPackagesOutputDirName: $(PackagesOutputDirName)
+  #     $body += @{ blocks = $blocks }
+  #     Write-Host "body:`n$(ConvertTo-Json $body -Depth 99)"
+  #     Invoke-RestMethod -uri "$($env:Endjin_Slack_ReleasesWebhookUri)" `
+  #                       -Method Post `
+  #                       -body (ConvertTo-Json $body -Depth 99) `
+  #                       -ContentType 'application/json'
+  #   condition: and(succeeded(), or(eq(variables['Endjin.ForcePublish'], 'true'), eq(variables['Endjin_PreReleaseTag'], '')), ne(variables['Endjin_Slack_ReleasesWebhookUri'], ''))
+  #   displayName: Send notification to Slack channel
+  #   env:
+  #     Endjin_Slack_ReleasesWebhookUri: $(Endjin_Slack_ReleasesWebhookUri)
+  #     Endjin_Repository_Name: $(Build.Repository.Name)
+  #     GitVersion_SemVer: $(Endjin_SemVer)
+  #     Build_ArtifactStagingDirectory: $(Build.ArtifactStagingDirectory)
+  #     BuildPackagesOutputDirName: $(PackagesOutputDirName)
       
