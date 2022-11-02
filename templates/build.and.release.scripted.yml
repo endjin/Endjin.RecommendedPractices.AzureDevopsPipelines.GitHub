@@ -310,14 +310,14 @@ jobs:
 
   - ${{ parameters.preCopyNugetPackages }}
 
-  - task: CopyFiles@2
+  - pwsh: |
+      $nugetDropDir = Join-Path $env:BUILD_ARTIFACTSTAGINGDIRECTORY "Release" "NuGet"
+      if (!(Test-Path $nugetDropDir)) { New-Item -ItemType Directory -Path $nugetDropDir }
+      Copy-Item -Path $env:PACKAGES_OUTPUT_DIR_NAME -Filter *.nupkg -Recurse -Verbose
+      Copy-Item -Path $env:PACKAGES_OUTPUT_DIR_NAME -Filter *.snupkg -Recurse -Verbose
     displayName: 'Copy Nuget Packages To Release Folder'
-    inputs:
-      SourceFolder: '$(Build.SourcesDirectory)'
-      Contents: |
-        $(PackagesOutputDirName)/**/*.nupkg
-        $(PackagesOutputDirName)/**/*.snupkg
-      TargetFolder: '$(Build.ArtifactStagingDirectory)/Release/NuGet'
+    env:
+      PACKAGES_OUTPUT_DIR_NAME: $(PackagesOutputDirName)
 
   - ${{ parameters.postCopyNugetPackages }}
   - ${{ parameters.prePublishReleaseArtifacts }}
