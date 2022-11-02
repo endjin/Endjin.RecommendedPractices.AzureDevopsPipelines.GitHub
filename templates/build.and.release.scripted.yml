@@ -32,6 +32,7 @@ parameters:
   testTasks: 'Test,TestReport'
   packageTasks: 'Package'
   compileTasksServiceConnection: ''
+  internalVstsFeed: 'endjin-nuget-pre-releases'
 
 jobs:
 - job: Build
@@ -371,11 +372,11 @@ jobs:
 
   - task: NuGetCommand@2
     displayName: 'Publish to internal feed'
-    condition: and(succeeded(), and(ne(variables['Endjin.ForcePublish'], 'true'), ne(variables['Endjin_PreReleaseTag'], '')))
+    condition: and(succeeded(), eq(variables['Endjin.InternalPublish'], 'true'))
     inputs:
       command: push
       nuGetFeedType: internal
-      publishVstsFeed: 'endjin-nuget-pre-releases'
+      publishVstsFeed: ${{ parameters.internalVstsFeed }}
       versioningScheme: Off
       packagesToPush: '$(Build.ArtifactStagingDirectory)/Release/**/*.nupkg'
 
