@@ -311,10 +311,13 @@ jobs:
   - ${{ parameters.preCopyNugetPackages }}
 
   - pwsh: |
+      # Ensure we have a 'Release' folder as this needs to exist for the next step
       $nugetDropDir = Join-Path $env:BUILD_ARTIFACTSTAGINGDIRECTORY "Release" "NuGet"
       if (!(Test-Path $nugetDropDir)) { New-Item -ItemType Directory -Path $nugetDropDir }
-      Copy-Item -Path $env:PACKAGES_OUTPUT_DIR_NAME -Filter *.nupkg -Recurse -Verbose
-      Copy-Item -Path $env:PACKAGES_OUTPUT_DIR_NAME -Filter *.snupkg -Recurse -Verbose
+
+      # Copy any packages that were produced
+      Get-ChildItem -Path $env:PACKAGES_OUTPUT_DIR_NAME -Filter *.nupkg -Recurse | Copy-Item -Destination $nugetDropDir -Verbose
+      Get-ChildItem -Path $env:PACKAGES_OUTPUT_DIR_NAME -Filter *.snupkg -Recurse | Copy-Item -Destination $nugetDropDir -Verbose
     displayName: 'Copy Nuget Packages To Release Folder'
     env:
       PACKAGES_OUTPUT_DIR_NAME: $(PackagesOutputDirName)
