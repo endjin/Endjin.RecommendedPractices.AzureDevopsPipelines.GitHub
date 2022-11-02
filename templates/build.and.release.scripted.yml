@@ -256,6 +256,9 @@ jobs:
   steps:
   - checkout: self    # ensure we have a git reference to support later tasks
     fetchDepth: 0
+  - pwsh: |
+      ls -la $(Build.SourcesDirectory)
+    displayName: DEBUG - Before artefact download
   - template: install-dotnet-sdks.yml
     parameters:
       netSdkVersion: ${{ parameters.netSdkVersion }}
@@ -266,6 +269,9 @@ jobs:
       buildType: 'current'
       artifactName: build
       targetPath: $(Build.SourcesDirectory)
+  - pwsh: |
+      ls -la $(Build.SourcesDirectory)
+    displayName: DEBUG - After artefact download
 
   - ${{ parameters.preCustomEnvironmentVariables }}
 
@@ -347,7 +353,7 @@ jobs:
     displayName: Debug release condition parameters
     env:
       Endjin_SemVer: $(Endjin_SemVer)
-      Endjin_ForcePublish: $(Endjin.ForcePublish)
+      Endjin_ForcePublish: ${{ variables['Endjin.ForcePublish'] }}
       Endjin_PreReleaseTag: $(Endjin_PreReleaseTag)
       Endjin_IsPreRelease: $(Endjin_IsPreRelease)
 
