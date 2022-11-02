@@ -81,6 +81,7 @@ jobs:
       SYSTEM_COLLECTIONURI: $(SYSTEM_COLLECTIONURI)
 
   - checkout: self
+    fetchDepth: 0
     submodules: recursive
 
   - template: install-dotnet-sdks.yml
@@ -254,6 +255,7 @@ jobs:
     PackagesOutputDirName: '_packages'
   steps:
   - checkout: self    # ensure we have a git reference to support later tasks
+    fetchDepth: 0
   - template: install-dotnet-sdks.yml
     parameters:
       netSdkVersion: ${{ parameters.netSdkVersion }}
@@ -298,7 +300,7 @@ jobs:
   # prefix for these build variables, we only have to change them in one place.
   
   - powershell: |
-      Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$(-not ([string]::IsNullOrEmpty($Env:SemVer)))"
+      Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$(-not ([string]::IsNullOrEmpty($Env:PreReleaseTag)))"
       Write-Host "##vso[task.setvariable variable=Endjin_PreReleaseTag]$Env:PreReleaseTag"
       Write-Host "##vso[task.setvariable variable=Endjin_SemVer]$Env:SemVer"
     displayName: 'Set Version Information Build Variables'
@@ -338,11 +340,13 @@ jobs:
       Write-Host "Endjin_SemVer: '$($env:Endjin_SemVer)'"
       Write-Host "Endjin.ForcePublish: '$($env:Endjin_ForcePublish)'"
       Write-Host "Endjin_PreReleaseTag: '$($env:Endjin_PreReleaseTag)'"
+      Write-Host "Endjin_IsPreRelease: '$($env:Endjin_IsPreRelease)'"
     displayName: Debug release condition parameters
     env:
       Endjin_SemVer: $(Endjin_SemVer)
       Endjin_ForcePublish: $(Endjin.ForcePublish)
       Endjin_PreReleaseTag: $(Endjin_PreReleaseTag)
+      Endjin_IsPreRelease: $(Endjin_IsPreRelease)
 
   - task: GithubRelease@1 
     displayName: 'Create GitHub Release'
