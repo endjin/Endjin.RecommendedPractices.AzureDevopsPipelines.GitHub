@@ -60,6 +60,7 @@ jobs:
     # Endjin_Service_Connection_GitHub
     # Endjin_Slack_ReleasesWebhookUri
     # Endjin.ForcePublish
+    # Endjin.InternalPublish
   steps:
   - powershell: |
       if ($env:BUILD_REPOSITORY_PROVIDER -eq "GitHub") {
