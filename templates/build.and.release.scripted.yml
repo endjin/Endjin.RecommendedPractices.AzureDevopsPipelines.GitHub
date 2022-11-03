@@ -32,6 +32,7 @@ parameters:
   testTasks: 'Test,TestReport'
   packageTasks: 'Package'
   compileTasksServiceConnection: ''
+  internalVstsFeed: 'endjin-nuget-pre-releases'
 
 jobs:
 - job: Build
@@ -59,6 +60,7 @@ jobs:
     # Endjin_Service_Connection_GitHub
     # Endjin_Slack_ReleasesWebhookUri
     # Endjin.ForcePublish
+    # Endjin.InternalPublish
   steps:
   - powershell: |
       if ($env:BUILD_REPOSITORY_PROVIDER -eq "GitHub") {
@@ -81,6 +83,7 @@ jobs:
       SYSTEM_COLLECTIONURI: $(SYSTEM_COLLECTIONURI)
 
   - checkout: self
+    fetchDepth: 0
     submodules: recursive
 
   - template: install-dotnet-sdks.yml
@@ -92,11 +95,6 @@ jobs:
   - ${{ parameters.preCustomEnvironmentVariables }}
 
   - ${{ parameters.postCustomEnvironmentVariables }}
-
-  - powershell: |
-      Write-Host "Initializing $(Build.ArtifactStagingDirectory)/Release"
-      New-Item -Path $(Build.ArtifactStagingDirectory) -Name "Release" -ItemType "directory"
-    displayName: 'Initialize Artifact Staging Release Directory'
 
   # Useful for debugging purposes
   - powershell: 'gci Env:'
@@ -172,6 +170,7 @@ jobs:
         htmlPath: '$(RunCompile_with_AzAuth.SbomHtmlReportPath)'
 
   - task: PublishPipelineArtifact@1
+    displayName: Store Compilation Outputs
     inputs:
       targetPath: '$(Build.SourcesDirectory)'
       artifactType: 'pipeline'
@@ -199,6 +198,7 @@ jobs:
       additionalNetSdkVersions: ${{ parameters.additionalNetSdkVersions }}
       includeNetSdkPreviewVersions: ${{ parameters.includeNetSdkPreviewVersions }}
   - task: DownloadPipelineArtifact@2
+    displayName: Retrieve Compilation Outputs
     inputs:
       buildType: 'current'
       artifactName: build
@@ -254,12 +254,16 @@ jobs:
     PackagesOutputDirName: '_packages'
   steps:
   - checkout: self    # ensure we have a git reference to support later tasks
+    fetchDepth: 0
+
   - template: install-dotnet-sdks.yml
     parameters:
       netSdkVersion: ${{ parameters.netSdkVersion }}
       additionalNetSdkVersions: ${{ parameters.additionalNetSdkVersions }}
       includeNetSdkPreviewVersions: ${{ parameters.includeNetSdkPreviewVersions }}
+
   - task: DownloadPipelineArtifact@2
+    displayName: Retrieve Compilation Outputs
     inputs:
       buildType: 'current'
       artifactName: build
@@ -298,7 +302,7 @@ jobs:
   # prefix for these build variables, we only have to change them in one place.
   
   - powershell: |
-      Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$(-not ([string]::IsNullOrEmpty($Env:SemVer)))"
+      Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$(-not ([string]::IsNullOrEmpty($Env:PreReleaseTag)))"
       Write-Host "##vso[task.setvariable variable=Endjin_PreReleaseTag]$Env:PreReleaseTag"
       Write-Host "##vso[task.setvariable variable=Endjin_SemVer]$Env:SemVer"
     displayName: 'Set Version Information Build Variables'
@@ -308,22 +312,27 @@ jobs:
 
   - ${{ parameters.preCopyNugetPackages }}
 
-  - task: CopyFiles@2
+  - pwsh: |
+      # Ensure we have a 'Release' folder as this needs to exist for the next step
+      $nugetDropDir = Join-Path $env:BUILD_ARTIFACTSTAGINGDIRECTORY "Release" "NuGet"
+      if (!(Test-Path $nugetDropDir)) { New-Item -ItemType Directory -Path $nugetDropDir }
+
+      # Copy any packages that were produced
+      Get-ChildItem -Path $env:PACKAGES_OUTPUT_DIR_NAME -Filter *.nupkg -Recurse | Copy-Item -Destination $nugetDropDir -Verbose
+      Get-ChildItem -Path $env:PACKAGES_OUTPUT_DIR_NAME -Filter *.snupkg -Recurse | Copy-Item -Destination $nugetDropDir -Verbose
     displayName: 'Copy Nuget Packages To Release Folder'
-    inputs:
-      SourceFolder: '$(Build.SourcesDirectory)'
-      Contents: |
-        $(PackagesOutputDirName)/**/*.nupkg
-        $(PackagesOutputDirName)/**/*.snupkg
-      TargetFolder: '$(Build.ArtifactStagingDirectory)/Release/NuGet'
+    env:
+      PACKAGES_OUTPUT_DIR_NAME: $(PackagesOutputDirName)
 
   - ${{ parameters.postCopyNugetPackages }}
   - ${{ parameters.prePublishReleaseArtifacts }}
 
-  - task: PublishBuildArtifacts@1
+  - task: PublishPipelineArtifact@1
     displayName: 'Publish Release Artifacts'
     inputs:
-      PathtoPublish: '$(Build.ArtifactStagingDirectory)/Release'
+      targetPath: '$(Build.ArtifactStagingDirectory)/Release'
+      artifactType: 'pipeline'
+      artifactName: 'drop'
 
   - ${{ parameters.postPublishReleaseArtifacts }}
 
@@ -337,12 +346,16 @@ jobs:
       Write-Host "Repository Name: '$($env:BUILD_REPOSITORY_NAME)'"
       Write-Host "Endjin_SemVer: '$($env:Endjin_SemVer)'"
       Write-Host "Endjin.ForcePublish: '$($env:Endjin_ForcePublish)'"
+      Write-Host "Endjin.InternalPublish: '$($env:Endjin_InternalPublish)'"
       Write-Host "Endjin_PreReleaseTag: '$($env:Endjin_PreReleaseTag)'"
+      Write-Host "Endjin_IsPreRelease: '$($env:Endjin_IsPreRelease)'"
     displayName: Debug release condition parameters
     env:
       Endjin_SemVer: $(Endjin_SemVer)
-      Endjin_ForcePublish: $(Endjin.ForcePublish)
+      Endjin_ForcePublish: ${{ variables['Endjin.ForcePublish'] }}
+      Endjin_InternalPublish: ${{ variables['Endjin.InternalPublish'] }}
       Endjin_PreReleaseTag: $(Endjin_PreReleaseTag)
+      Endjin_IsPreRelease: $(Endjin_IsPreRelease)
 
   - task: GithubRelease@1 
     displayName: 'Create GitHub Release'
@@ -361,13 +374,23 @@ jobs:
   - ${{ parameters.prePublishNugetPackages }}
 
   - task: NuGetCommand@2
+    displayName: 'Publish to internal feed'
+    condition: and(succeeded(), eq(variables['Endjin.InternalPublish'], 'true'))
+    inputs:
+      command: push
+      nuGetFeedType: internal
+      publishVstsFeed: ${{ parameters.internalVstsFeed }}
+      versioningScheme: Off
+      packagesToPush: '$(Build.ArtifactStagingDirectory)/Release/**/*.nupkg'
+
+  - task: NuGetCommand@2
     displayName: 'Publish to nuget.org'
     condition: and(succeeded(), or(eq(variables['Endjin.ForcePublish'], 'true'), eq(variables['Endjin_PreReleaseTag'], '')))
     inputs:
       command: push
       nuGetFeedType: external
       publishFeedCredentials: ${{ parameters.service_connection_nuget_org }}
-      versioningScheme: byBuildNumber
+      versioningScheme: Off
       packagesToPush: '$(Build.ArtifactStagingDirectory)/Release/**/*.nupkg'
 
   - ${{ parameters.postPublishNugetPackages }}
