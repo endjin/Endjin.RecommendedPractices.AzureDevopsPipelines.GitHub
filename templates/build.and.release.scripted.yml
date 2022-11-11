@@ -404,7 +404,7 @@ jobs:
       Write-Host "Build_ArtifactStagingDirectory: $($env:Build_ArtifactStagingDirectory)"
       Write-Host "Looking for packages in: $($env:Build_ArtifactStagingDirectory)/Release/NuGet/$($env:BuildPackagesOutputDirName)"
       Write-Host "Dir Listing of '$($env:Build_ArtifactStagingDirectory)/Release/NuGet)':"
-      & ls -la $($env:Build_ArtifactStagingDirectory)/Release/NuGet
+      gci -recurse "$($env:Build_ArtifactStagingDirectory)/Release/NuGet" | Out-String | Write-Host
       $packages = gci -Recurse -Filter *.nupkg -Path "$($env:Build_ArtifactStagingDirectory)/Release/NuGet/$($env:BuildPackagesOutputDirName)"
       Write-Host $packages
 
