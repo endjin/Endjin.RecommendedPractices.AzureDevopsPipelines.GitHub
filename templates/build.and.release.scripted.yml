@@ -309,6 +309,12 @@ jobs:
     displayName: 'Build Packages'
     env:
       NUGET_PACKAGES: $(Build.SourcesDirectory)/.nuget-packages
+      BUILDVAR_SkipVersion: true
+      BUILDVAR_GitVersion: >
+        {
+          "SemVer": "$(Endjin_SemVer)"
+        }
+      
 
   - ${{ parameters.preCopyNugetPackages }}
 
