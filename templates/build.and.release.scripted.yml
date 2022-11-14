@@ -291,6 +291,21 @@ jobs:
   - ${{ parameters.preCustomEnvironmentVariables }}
 
   - ${{ parameters.postCustomEnvironmentVariables }}
+
+  - pwsh: |
+      Write-Host "Repository Name: '$($env:BUILD_REPOSITORY_NAME)'"
+      Write-Host "Endjin_SemVer: '$($env:Endjin_SemVer)'"
+      Write-Host "Endjin.ForcePublish: '$($env:Endjin_ForcePublish)'"
+      Write-Host "Endjin.InternalPublish: '$($env:Endjin_InternalPublish)'"
+      Write-Host "Endjin_PreReleaseTag: '$($env:Endjin_PreReleaseTag)'"
+      Write-Host "Endjin_IsPreRelease: '$($env:Endjin_IsPreRelease)'"
+    displayName: Debug versioning details
+    env:
+      Endjin_SemVer: $(Endjin_SemVer)
+      Endjin_ForcePublish: ${{ variables['Endjin.ForcePublish'] }}
+      Endjin_InternalPublish: ${{ variables['Endjin.InternalPublish'] }}
+      Endjin_PreReleaseTag: $(Endjin_PreReleaseTag)
+      Endjin_IsPreRelease: $(Endjin_IsPreRelease)
         
   - task: PowerShell@2
     inputs:
@@ -347,21 +362,6 @@ jobs:
       versionSpec: '5.1.0'
   
   - ${{ parameters.preCreateGitHubRelease }}
-
-  - pwsh: |
-      Write-Host "Repository Name: '$($env:BUILD_REPOSITORY_NAME)'"
-      Write-Host "Endjin_SemVer: '$($env:Endjin_SemVer)'"
-      Write-Host "Endjin.ForcePublish: '$($env:Endjin_ForcePublish)'"
-      Write-Host "Endjin.InternalPublish: '$($env:Endjin_InternalPublish)'"
-      Write-Host "Endjin_PreReleaseTag: '$($env:Endjin_PreReleaseTag)'"
-      Write-Host "Endjin_IsPreRelease: '$($env:Endjin_IsPreRelease)'"
-    displayName: Debug release condition parameters
-    env:
-      Endjin_SemVer: $(Endjin_SemVer)
-      Endjin_ForcePublish: ${{ variables['Endjin.ForcePublish'] }}
-      Endjin_InternalPublish: ${{ variables['Endjin.InternalPublish'] }}
-      Endjin_PreReleaseTag: $(Endjin_PreReleaseTag)
-      Endjin_IsPreRelease: $(Endjin_IsPreRelease)
 
   - task: GithubRelease@1 
     displayName: 'Create GitHub Release'
