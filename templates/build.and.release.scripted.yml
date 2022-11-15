@@ -258,7 +258,9 @@ jobs:
 
 
 - job: Package
-  dependsOn: Test
+  dependsOn:
+  - Build
+  - Test
   pool:
     vmImage: ${{ parameters.vmImage }}
 
