@@ -169,9 +169,10 @@ jobs:
   # elsewhere in the script, so that if the scripted build is updated to reinstate the GITVERSION_
   # prefix for these build variables, we only have to change them in one place.
   - powershell: |
-      Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$(-not ([string]::IsNullOrEmpty($Env:PreReleaseTag)))"
-      Write-Host "##vso[task.setvariable variable=Endjin_PreReleaseTag]$Env:PreReleaseTag"
-      Write-Host "##vso[task.setvariable variable=Endjin_SemVer]$Env:SemVer"
+      Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease;isoutput=true]$(-not ([string]::IsNullOrEmpty($Env:PreReleaseTag)))"
+      Write-Host "##vso[task.setvariable variable=Endjin_PreReleaseTag;isoutput=true]$Env:PreReleaseTag"
+      Write-Host "##vso[task.setvariable variable=Endjin_SemVer;isoutput=true]$Env:SemVer"
+    name: SetVersionInfo
     displayName: 'Set Version Information Build Variables'
     env:
       PreReleaseTag: $(GitVersion.PreReleaseTag)
@@ -270,9 +271,9 @@ jobs:
     DOTNET_CLI_TELEMETRY_OPTOUT: 1
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
     PackagesOutputDirName: '_packages'
-    Endjin_IsPreRelease: $[ dependencies.Build.outputs['GitRepoMetadata.Endjin_IsPreRelease'] ]
-    Endjin_PreReleaseTag: $[ dependencies.Build.outputs['GitRepoMetadata.Endjin_PreReleaseTag'] ]
-    Endjin_SemVer: $[ dependencies.Build.outputs['GitRepoMetadata.Endjin_SemVer'] ]
+    Endjin_IsPreRelease: $[ dependencies.Build.outputs['SetVersionInfo.Endjin_IsPreRelease'] ]
+    Endjin_PreReleaseTag: $[ dependencies.Build.outputs['SetVersionInfo.Endjin_PreReleaseTag'] ]
+    Endjin_SemVer: $[ dependencies.Build.outputs['SetVersionInfo.Endjin_SemVer'] ]
 
   steps:
   - template: install-dotnet-sdks.yml
