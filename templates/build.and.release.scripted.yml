@@ -159,6 +159,25 @@ jobs:
           "git_sha": "${{ variables['Build.SourceVersion'] }}"
         }
 
+  # Scripted build 0.1.0 sets all the GitVersion outputs into environment variables with a
+  # GITVERSION_ prefix, but currently, due to this bug:
+  #  https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
+  # when it emits them as Build Variables, it does not include the prefix. Environment variable
+  # set by the build script are only available while the build script runs, so it's the build
+  # variables we have to depend on here.
+  # We're giving them an Endjin_ prefix here so we've got a stable name to refer to them by
+  # elsewhere in the script, so that if the scripted build is updated to reinstate the GITVERSION_
+  # prefix for these build variables, we only have to change them in one place.
+  - powershell: |
+      Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease;isoutput=true]$(-not ([string]::IsNullOrEmpty($Env:PreReleaseTag)))"
+      Write-Host "##vso[task.setvariable variable=Endjin_PreReleaseTag;isoutput=true]$Env:PreReleaseTag"
+      Write-Host "##vso[task.setvariable variable=Endjin_SemVer;isoutput=true]$Env:SemVer"
+    name: SetVersionInfo
+    displayName: 'Set Version Information Build Variables'
+    env:
+      PreReleaseTag: $(GitVersion.PreReleaseTag)
+      SemVer: $(GitVersion.SemVer)
+
   # ref: https://marketplace.visualstudio.com/items?itemName=LakshayKaushik.PublishHTMLReports
   - task: publishhtmlreport@1
     displayName: 'Publish SBOM Report'
@@ -175,7 +194,6 @@ jobs:
       targetPath: '$(Build.SourcesDirectory)'
       artifactType: 'pipeline'
       artifactName: 'build'
-
 
 - job: Test
   dependsOn: Build
@@ -239,7 +257,9 @@ jobs:
 
 
 - job: Package
-  dependsOn: Test
+  dependsOn:
+  - Build
+  - Test
   pool:
     vmImage: ${{ parameters.vmImage }}
 
@@ -252,10 +272,11 @@ jobs:
     DOTNET_CLI_TELEMETRY_OPTOUT: 1
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
     PackagesOutputDirName: '_packages'
-  steps:
-  - checkout: self    # ensure we have a git reference to support later tasks
-    fetchDepth: 0
+    Endjin_IsPreRelease: $[ dependencies.Build.outputs['SetVersionInfo.Endjin_IsPreRelease'] ]
+    Endjin_PreReleaseTag: $[ dependencies.Build.outputs['SetVersionInfo.Endjin_PreReleaseTag'] ]
+    Endjin_SemVer: $[ dependencies.Build.outputs['SetVersionInfo.Endjin_SemVer'] ]
 
+  steps:
   - template: install-dotnet-sdks.yml
     parameters:
       netSdkVersion: ${{ parameters.netSdkVersion }}
@@ -272,6 +293,21 @@ jobs:
   - ${{ parameters.preCustomEnvironmentVariables }}
 
   - ${{ parameters.postCustomEnvironmentVariables }}
+
+  - pwsh: |
+      Write-Host "Repository Name: '$($env:BUILD_REPOSITORY_NAME)'"
+      Write-Host "Endjin_SemVer: '$($env:Endjin_SemVer)'"
+      Write-Host "Endjin.ForcePublish: '$($env:Endjin_ForcePublish)'"
+      Write-Host "Endjin.InternalPublish: '$($env:Endjin_InternalPublish)'"
+      Write-Host "Endjin_PreReleaseTag: '$($env:Endjin_PreReleaseTag)'"
+      Write-Host "Endjin_IsPreRelease: '$($env:Endjin_IsPreRelease)'"
+    displayName: Debug versioning details
+    env:
+      Endjin_SemVer: $(Endjin_SemVer)
+      Endjin_ForcePublish: ${{ variables['Endjin.ForcePublish'] }}
+      Endjin_InternalPublish: ${{ variables['Endjin.InternalPublish'] }}
+      Endjin_PreReleaseTag: $(Endjin_PreReleaseTag)
+      Endjin_IsPreRelease: $(Endjin_IsPreRelease)
         
   - task: PowerShell@2
     inputs:
@@ -290,25 +326,11 @@ jobs:
     displayName: 'Build Packages'
     env:
       NUGET_PACKAGES: $(Build.SourcesDirectory)/.nuget-packages
-
-  # Scripted build 0.1.0 sets all the GitVersion outputs into environment variables with a
-  # GITVERSION_ prefix, but currently, due to this bug:
-  #  https://github.com/endjin/Endjin.RecommendedPractices.Build/issues/3
-  # when it emits them as Build Variables, it does not include the prefix. Environment variable
-  # set by the build script are only available while the build script runs, so it's the build
-  # variables we have to depend on here.
-  # We're giving them an Endjin_ prefix here so we've got a stable name to refer to them by
-  # elsewhere in the script, so that if the scripted build is updated to reinstate the GITVERSION_
-  # prefix for these build variables, we only have to change them in one place.
-  
-  - powershell: |
-      Write-Host "##vso[task.setvariable variable=Endjin_IsPreRelease]$(-not ([string]::IsNullOrEmpty($Env:PreReleaseTag)))"
-      Write-Host "##vso[task.setvariable variable=Endjin_PreReleaseTag]$Env:PreReleaseTag"
-      Write-Host "##vso[task.setvariable variable=Endjin_SemVer]$Env:SemVer"
-    displayName: 'Set Version Information Build Variables'
-    env:
-      PreReleaseTag: $(PreReleaseTag)
-      SemVer: $(SemVer)
+      BUILDVAR_SkipVersion: true
+      BUILDVAR_GitVersion: >
+        {
+          "SemVer": "$(Endjin_SemVer)"
+        }
 
   - ${{ parameters.preCopyNugetPackages }}
 
@@ -341,21 +363,6 @@ jobs:
       versionSpec: '5.1.0'
   
   - ${{ parameters.preCreateGitHubRelease }}
-
-  - pwsh: |
-      Write-Host "Repository Name: '$($env:BUILD_REPOSITORY_NAME)'"
-      Write-Host "Endjin_SemVer: '$($env:Endjin_SemVer)'"
-      Write-Host "Endjin.ForcePublish: '$($env:Endjin_ForcePublish)'"
-      Write-Host "Endjin.InternalPublish: '$($env:Endjin_InternalPublish)'"
-      Write-Host "Endjin_PreReleaseTag: '$($env:Endjin_PreReleaseTag)'"
-      Write-Host "Endjin_IsPreRelease: '$($env:Endjin_IsPreRelease)'"
-    displayName: Debug release condition parameters
-    env:
-      Endjin_SemVer: $(Endjin_SemVer)
-      Endjin_ForcePublish: ${{ variables['Endjin.ForcePublish'] }}
-      Endjin_InternalPublish: ${{ variables['Endjin.InternalPublish'] }}
-      Endjin_PreReleaseTag: $(Endjin_PreReleaseTag)
-      Endjin_IsPreRelease: $(Endjin_IsPreRelease)
 
   - task: GithubRelease@1 
     displayName: 'Create GitHub Release'
