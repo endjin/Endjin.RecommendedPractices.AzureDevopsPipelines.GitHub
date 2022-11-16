@@ -194,6 +194,13 @@ jobs:
       targetPath: '$(Build.SourcesDirectory)'
       artifactType: 'pipeline'
       artifactName: 'build'
+  - task: PublishPipelineArtifact@1
+    condition: always()
+    displayName: Store Logs
+    inputs:
+      targetPath: '$(Build.SourcesDirectory)/*.log'
+      artifactType: 'pipeline'
+      artifactName: 'logs'
 
 
 - job: Test
@@ -246,6 +253,14 @@ jobs:
       SYSTEM_ACCESSTOKEN: $(System.AccessToken)     # required by the custom test logger
 
   - ${{ parameters.prePublishCodeCoverageReport }}
+
+  - task: PublishPipelineArtifact@1
+    condition: always()
+    displayName: Store Logs
+    inputs:
+      targetPath: '$(Build.SourcesDirectory)/*.log'
+      artifactType: 'pipeline'
+      artifactName: 'logs'
 
   - task: PublishCodeCoverageResults@1
     displayName: 'Publish Code Coverage Report'
@@ -332,7 +347,14 @@ jobs:
         {
           "SemVer": "$(Endjin_SemVer)"
         }
-      
+
+  - task: PublishPipelineArtifact@1
+    condition: always()
+    displayName: Store Logs
+    inputs:
+      targetPath: '$(Build.SourcesDirectory)/*.log'
+      artifactType: 'pipeline'
+      artifactName: 'logs'
 
   - ${{ parameters.preCopyNugetPackages }}
 
