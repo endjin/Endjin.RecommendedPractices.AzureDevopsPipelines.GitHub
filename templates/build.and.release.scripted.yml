@@ -299,6 +299,7 @@ jobs:
       Write-Host "Endjin_SemVer: '$($env:Endjin_SemVer)'"
       Write-Host "Endjin.ForcePublish: '$($env:Endjin_ForcePublish)'"
       Write-Host "Endjin.InternalPublish: '$($env:Endjin_InternalPublish)'"
+      Write-Host "Endjin.ForceRelease: '$($env:Endjin_ForceRelease)'"
       Write-Host "Endjin_PreReleaseTag: '$($env:Endjin_PreReleaseTag)'"
       Write-Host "Endjin_IsPreRelease: '$($env:Endjin_IsPreRelease)'"
     displayName: Debug versioning details
@@ -306,6 +307,7 @@ jobs:
       Endjin_SemVer: $(Endjin_SemVer)
       Endjin_ForcePublish: ${{ variables['Endjin.ForcePublish'] }}
       Endjin_InternalPublish: ${{ variables['Endjin.InternalPublish'] }}
+      Endjin_ForceRelease: ${{ variables['Endjin.ForceRelease'] }}
       Endjin_PreReleaseTag: $(Endjin_PreReleaseTag)
       Endjin_IsPreRelease: $(Endjin_IsPreRelease)
         
@@ -366,7 +368,7 @@ jobs:
 
   - task: GithubRelease@1 
     displayName: 'Create GitHub Release'
-    condition: and(succeeded(), or(eq(variables['Endjin.ForcePublish'], 'true'), eq(variables['Endjin_PreReleaseTag'], '')))
+    condition: and(succeeded(), or(eq(variables['Endjin.ForcePublish'], 'true'), eq(variables['Endjin_PreReleaseTag'], ''), eq(variables['Endjin.ForceRelease'], 'true')))
     inputs:
       gitHubConnection: ${{ parameters.service_connection_github }}
       repositoryName: $(Build.Repository.Name)
