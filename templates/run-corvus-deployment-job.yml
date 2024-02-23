@@ -1,0 +1,50 @@
+parameters:
+  environmentName:
+  appDisplayName:
+  sourceArtifactsName:
+  azureSubscription:
+  deployCommand:
+
+jobs:
+- deployment: deploy_to_${{ parameters.environmentName }}
+  displayName: Deploy to ${{ parameters.environmentName }}
+  pool:
+    vmImage: 'ubuntu-latest'
+  environment: ${{ parameters.environmentName }}
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+        - download: current
+          artifact: ${{ parameters.sourceArtifactsName }}
+          displayName: Retrieve source build artifact
+
+        - download: current
+          artifact: deployment
+          displayName: Retrieve deployment tooling artifact
+
+        - task: AzurePowerShell@4
+          displayName: 'Deploy ${{ parameters.appDisplayName }}'
+          inputs:
+            azureSubscription: ${{ parameters.azureSubscription }}
+            ScriptType: InlineScript
+            Inline: |
+              gci env: | ft -AutoSize | Out-String | Write-Host
+              # Suppress the default progress indicators as they mess with the logging output
+              $ProgressPreference = "SilentlyContinue"
+              
+              $deployCmd = @"
+              ${{ parameters.deployCommand }}
+              "@
+
+              Write-Host "DeployCommand: $deployCmd"
+              ${{ parameters.deployCommand }}
+
+            # Temporarily force a downgrade of the AzurePowerShell cmdlets because (as of September 2020 and v4.6.0) a bug
+            # was introduced which breaks use of securestring with ARM templates:
+            # https://github.com/Azure/azure-powershell/issues/12792
+            # https://github.com/Azure/azure-powershell/issues/12819
+            # Once this issue is fixed, we should revert back to using the latest version of the cmdlets.
+            preferredAzurePowerShellVersion: '4.4.0'
+            pwsh: true
+            workingDirectory: $(Pipeline.Workspace)/deployment
